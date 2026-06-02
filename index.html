@@ -1135,6 +1135,11 @@ html { -webkit-text-size-adjust: 100%; }
         Clientes
         <span class="nav-badge" id="badge-clientes">0</span>
       </div>
+      <div class="nav-item" onclick="navigate('proveedores')" data-page="proveedores">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>
+        Proveedores
+        <span class="nav-badge" id="badge-proveedores">0</span>
+      </div>
       <div class="nav-item" onclick="navigate('vendedores')" data-page="vendedores">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
         Vendedores
@@ -1647,6 +1652,37 @@ html { -webkit-text-size-adjust: 100%; }
         </div>
       </div>
 
+      <!-- ══════════ PAGE: PROVEEDORES ══════════ -->
+      <div class="page" id="page-proveedores">
+        <div class="section-head">
+          <h2>Proveedores <small>Base de proveedores para retiros</small></h2>
+          <div class="flex gap-2">
+            <div class="search-bar">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="var(--white-faint)"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+              <input type="text" id="search-proveedores" placeholder="Buscar proveedor..." oninput="renderProveedores()">
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="abrirModalNuevoProveedor()">➕ Nuevo Proveedor</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th><th>Nombre</th><th>Dirección</th>
+                  <th>Teléfono</th><th>Contacto</th><th>Retiros</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="proveedores-tbody"></tbody>
+            </table>
+          </div>
+          <div class="empty-state hidden" id="proveedores-empty">
+            <div class="empty-icon">📦</div>
+            <p>No hay proveedores registrados.<br>Se agregan automáticamente al cargar un retiro con "Guardar como proveedor".</p>
+          </div>
+        </div>
+      </div>
+
       <!-- ══════════ PAGE: TÉCNICOS ══════════ -->
       <div class="page" id="page-tecnicos">
         <div class="section-head">
@@ -2150,6 +2186,45 @@ html { -webkit-text-size-adjust: 100%; }
 </div>
 
 
+
+<!-- ══════════ MODAL: NUEVO/EDITAR PROVEEDOR ══════════ -->
+<div class="modal-overlay hidden" id="modal-proveedor">
+  <div class="modal-box">
+    <h3 id="mp-titulo">Nuevo Proveedor</h3>
+    <input type="hidden" id="mp-codigo-original">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Código / Número *</label>
+        <input type="text" id="mp-codigo" placeholder="Ej: PROV-001">
+      </div>
+      <div class="form-group">
+        <label>Nombre / Empresa *</label>
+        <input type="text" id="mp-nombre" placeholder="Ej: Distribuidora ABC">
+      </div>
+      <div class="form-group">
+        <label>Dirección</label>
+        <input type="text" id="mp-direccion" placeholder="Dirección del proveedor">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="text" id="mp-telefono" placeholder="+595 981 000000">
+      </div>
+      <div class="form-group">
+        <label>Contacto</label>
+        <input type="text" id="mp-contacto" placeholder="Nombre del contacto">
+      </div>
+      <div class="form-group">
+        <label>Observaciones</label>
+        <input type="text" id="mp-obs" placeholder="Notas adicionales">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="guardarProveedor()">💾 Guardar Proveedor</button>
+      <button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-proveedor')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ MODAL: NUEVO/EDITAR TÉCNICO ══════════ -->
 <div class="modal-overlay hidden" id="modal-tecnico">
   <div class="modal-box">
@@ -2243,6 +2318,7 @@ const APP = {
   vendedores: [],      // Equipo de vendedores con WhatsApp
   choferes: [],        // Equipo de choferes/repartidores
   tecnicos: [],        // Equipo técnico
+  proveedores: [],     // Base de proveedores
   config: {
     minEntrega: 10,
     minTraslado: 15,
@@ -2419,6 +2495,15 @@ function iniciarListenersFirebase() {
     updateBadges();
   });
 
+  // Proveedores
+  db.ref('proveedores').on('value', snap => {
+    const data = snap.val() || {};
+    APP.proveedores = Object.values(data);
+    renderProveedores();
+    poblarSelectProveedor();
+    updateBadges();
+  });
+
   // Técnicos
   db.ref('tecnicos').on('value', snap => {
     const data = snap.val() || {};
@@ -2477,6 +2562,13 @@ function fbGuardarVendedor(vendedor) {
 
 function fbEliminarVendedor(id) {
   return db.ref('vendedores/' + id).remove();
+}
+
+function fbGuardarProveedor(prov) {
+  return db.ref('proveedores/' + prov.codigo).set(prov);
+}
+function fbEliminarProveedor(codigo) {
+  return db.ref('proveedores/' + codigo).remove();
 }
 
 function fbGuardarChofer(chofer) {
@@ -2554,6 +2646,7 @@ const PAGE_TITLES = {
   nueva: 'Nueva Entrega',
   ruta: 'Ruta del Día',
   rutachofer: 'Ruta por Chofer',
+  proveedores: 'Proveedores',
   vendedores: 'Vendedores',
   clientes: 'Base de Clientes',
   choferes: 'Choferes',
@@ -2583,6 +2676,7 @@ function navigate(page) {
   if (page === 'entregas')    renderEntregas();
   if (page === 'clientes')    renderClientes();
   if (page === 'ruta')        renderRuta();
+  if (page === 'proveedores') renderProveedores();
   if (page === 'vendedores')  renderVendedores();
   if (page === 'choferes')    renderChoferes();
   if (page === 'estadisticas') renderEstadisticas();
@@ -2692,6 +2786,25 @@ function guardarEntrega() {
     fechaCreacion: new Date().toISOString()
   };
 
+  // Guardar como proveedor si es retiro
+  if (tipoVal === 'retiro' && document.getElementById('guardar-proveedor')?.checked) {
+    const codigoProv = (document.getElementById('f-proveedor-codigo')?.value || '').trim().toUpperCase().replace(/\s/g,'_') || ('PROV_' + Date.now());
+    const nombreProv = (document.getElementById('f-proveedor-nombre')?.value || entrega.cliente).trim();
+    if (nombreProv) {
+      const prov = {
+        codigo: codigoProv,
+        nombre: nombreProv,
+        direccion: entrega.direccion,
+        telefono: entrega.telefono,
+        contacto: '',
+        obs: ''
+      };
+      fbGuardarProveedor(prov).then(() => toast('Proveedor guardado en la base', 'success'));
+      entrega.proveedor_codigo = codigoProv;
+      entrega.proveedor_nombre = nombreProv;
+    }
+  }
+
   // Guardar como cliente si corresponde
   if (document.getElementById('guardar-cliente').checked) {
     const clienteNuevo = {
@@ -2723,8 +2836,11 @@ function limpiarFormulario() {
   if (selCh) selCh.value = '';
   const tipoSel = document.getElementById('f-tipo');
   if (tipoSel) { tipoSel.value = 'reparto'; onTipoChange(); }
-  const provInp = document.getElementById('f-proveedor');
-  if (provInp) provInp.value = '';
+  const provCod = document.getElementById('f-proveedor-codigo');
+  if (provCod) provCod.value = '';
+  limpiarProveedor();
+  const guardarProv = document.getElementById('guardar-proveedor');
+  if (guardarProv) guardarProv.checked = false;
   const manInp = document.getElementById('f-vendedor-manual');
   if (manInp) manInp.remove();
   const waRow = document.getElementById('f-vendedor-wa-row');
@@ -3330,6 +3446,7 @@ function updateBadges() {
   document.getElementById('badge-vendedores').textContent = APP.vendedores.length;
   const bc = document.getElementById('badge-choferes'); if(bc) bc.textContent = APP.choferes.length;
   const bt = document.getElementById('badge-tecnicos'); if(bt) bt.textContent = (APP.tecnicos||[]).length;
+  const bp = document.getElementById('badge-proveedores'); if(bp) bp.textContent = (APP.proveedores||[]).length;
   const bcob = document.getElementById('badge-cobranzas');
   if(bcob) bcob.textContent = APP.entregas.filter(e => e.tipo === 'cobranza' || e.tipo === 'retiro').length;
 }
@@ -4983,6 +5100,171 @@ const _origRenderRutaChofer = renderRutaChofer;
 function renderRutaChofer() {
   _origRenderRutaChofer();
   if (_mapaAbierto) actualizarMapa();
+}
+
+
+
+// ─── GESTIÓN DE PROVEEDORES ───────────────────────────────
+
+function renderProveedores() {
+  const tbody = document.getElementById('proveedores-tbody');
+  const empty = document.getElementById('proveedores-empty');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const filtro = document.getElementById('search-proveedores')?.value.toLowerCase() || '';
+  let lista = APP.proveedores || [];
+  if (filtro) lista = lista.filter(p =>
+    (p.nombre||'').toLowerCase().includes(filtro) ||
+    (p.codigo||'').toLowerCase().includes(filtro) ||
+    (p.direccion||'').toLowerCase().includes(filtro)
+  );
+
+  if (lista.length === 0) { empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  lista.forEach(p => {
+    const retiros = APP.entregas.filter(e => e.tipo === 'retiro' && (e.proveedor_codigo === p.codigo || e.proveedor_nombre === p.nombre)).length;
+    tbody.innerHTML += `<tr>
+      <td><code style="font-size:11px;background:var(--bg-input);padding:2px 6px;border-radius:4px">${p.codigo||'—'}</code></td>
+      <td><strong>${p.nombre}</strong></td>
+      <td style="color:var(--white-dim);max-width:180px">${p.direccion||'—'}</td>
+      <td>${p.telefono ? `<a href="tel:${p.telefono}" style="color:var(--blue-light)">${p.telefono}</a>` : '—'}</td>
+      <td>${p.contacto||'—'}</td>
+      <td><strong style="font-family:var(--font-display)">${retiros}</strong></td>
+      <td>
+        <div class="action-btns">
+          <button class="btn btn-primary btn-xs" onclick="usarProveedor('${p.codigo}')">📦 Retiro</button>
+          <button class="btn btn-ghost btn-xs" onclick="editarProveedor('${p.codigo}')">✏️</button>
+          <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="eliminarProveedor('${p.codigo}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+  updateBadges();
+}
+
+function abrirModalNuevoProveedor() {
+  document.getElementById('mp-titulo').textContent = 'Nuevo Proveedor';
+  document.getElementById('mp-codigo-original').value = '';
+  ['mp-codigo','mp-nombre','mp-direccion','mp-telefono','mp-contacto','mp-obs'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('modal-proveedor').classList.remove('hidden');
+}
+
+function editarProveedor(codigo) {
+  const p = (APP.proveedores||[]).find(x => x.codigo === codigo);
+  if (!p) return;
+  document.getElementById('mp-titulo').textContent = 'Editar Proveedor';
+  document.getElementById('mp-codigo-original').value = p.codigo;
+  document.getElementById('mp-codigo').value    = p.codigo    || '';
+  document.getElementById('mp-nombre').value    = p.nombre    || '';
+  document.getElementById('mp-direccion').value = p.direccion || '';
+  document.getElementById('mp-telefono').value  = p.telefono  || '';
+  document.getElementById('mp-contacto').value  = p.contacto  || '';
+  document.getElementById('mp-obs').value       = p.obs       || '';
+  document.getElementById('modal-proveedor').classList.remove('hidden');
+}
+
+function guardarProveedor() {
+  const codigo = document.getElementById('mp-codigo').value.trim().toUpperCase().replace(/\s/g,'_');
+  const nombre = document.getElementById('mp-nombre').value.trim();
+  if (!codigo || !nombre) { toast('Código y nombre son obligatorios', 'error'); return; }
+
+  const prov = {
+    codigo,
+    nombre,
+    direccion: document.getElementById('mp-direccion').value.trim(),
+    telefono:  document.getElementById('mp-telefono').value.trim(),
+    contacto:  document.getElementById('mp-contacto').value.trim(),
+    obs:       document.getElementById('mp-obs').value.trim()
+  };
+
+  fbGuardarProveedor(prov)
+    .then(() => toast(`Proveedor "${nombre}" guardado`, 'success'))
+    .catch(() => toast('Error al guardar proveedor', 'error'));
+  cerrarModal('modal-proveedor');
+}
+
+function eliminarProveedor(codigo) {
+  const p = (APP.proveedores||[]).find(x => x.codigo === codigo);
+  if (!p || !confirm(`¿Eliminar al proveedor "${p.nombre}"?`)) return;
+  fbEliminarProveedor(codigo)
+    .then(() => toast('Proveedor eliminado', 'info'))
+    .catch(() => toast('Error al eliminar', 'error'));
+}
+
+function usarProveedor(codigo) {
+  const p = (APP.proveedores||[]).find(x => x.codigo === codigo);
+  if (!p) return;
+  navigate('nueva');
+  setTimeout(() => {
+    const tipoSel = document.getElementById('f-tipo');
+    if (tipoSel) { tipoSel.value = 'retiro'; onTipoChange(); }
+    setTimeout(() => rellenarProveedor(p), 200);
+  }, 300);
+}
+
+// ─── BÚSQUEDA RÁPIDA PROVEEDOR EN FORMULARIO ─────────────
+
+function buscarProveedorRapido() {
+  const codigo = document.getElementById('f-proveedor-codigo')?.value.trim().toUpperCase();
+  const result = document.getElementById('f-proveedor-result');
+  const manualRow = document.getElementById('f-proveedor-manual-row');
+  const guardarRow = document.getElementById('f-guardar-prov-row');
+  if (!codigo) {
+    result?.classList.add('hidden');
+    manualRow?.classList.remove('hidden');
+    guardarRow?.classList.remove('hidden');
+    return;
+  }
+
+  const p = (APP.proveedores||[]).find(x =>
+    x.codigo.toUpperCase() === codigo ||
+    x.codigo.toUpperCase().includes(codigo)
+  );
+
+  if (p) {
+    document.getElementById('f-proveedor-nombre-label').textContent = `${p.nombre} · ${p.direccion||''}`;
+    result?.classList.remove('hidden');
+    manualRow?.classList.add('hidden');
+    guardarRow?.classList.add('hidden');
+    // Pre-rellenar datos del proveedor en el formulario
+    rellenarProveedor(p);
+  } else {
+    result?.classList.add('hidden');
+    manualRow?.classList.remove('hidden');
+    guardarRow?.classList.remove('hidden');
+  }
+}
+
+function rellenarProveedor(p) {
+  const codInp = document.getElementById('f-proveedor-codigo');
+  if (codInp) codInp.value = p.codigo;
+  // Rellenar dirección y cliente con datos del proveedor
+  document.getElementById('f-cliente').value   = p.nombre    || '';
+  document.getElementById('f-direccion').value = p.direccion || '';
+  document.getElementById('f-telefono').value  = p.telefono  || '';
+  const nomLabel = document.getElementById('f-proveedor-nombre-label');
+  if (nomLabel) nomLabel.textContent = `${p.nombre} · ${p.direccion||''}`;
+  const result = document.getElementById('f-proveedor-result');
+  if (result) result.classList.remove('hidden');
+  const manualRow = document.getElementById('f-proveedor-manual-row');
+  if (manualRow) manualRow.classList.add('hidden');
+}
+
+function limpiarProveedor() {
+  const codInp = document.getElementById('f-proveedor-codigo');
+  if (codInp) codInp.value = '';
+  const result = document.getElementById('f-proveedor-result');
+  if (result) result.classList.add('hidden');
+  const manualRow = document.getElementById('f-proveedor-manual-row');
+  if (manualRow) manualRow.classList.remove('hidden');
+}
+
+function poblarSelectProveedor() {
+  // Para futura integración con select de proveedores
 }
 
 
