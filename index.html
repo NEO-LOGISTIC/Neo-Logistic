@@ -1012,6 +1012,47 @@ html { -webkit-text-size-adjust: 100%; }
   min-height: 42px;
 }
 
+
+/* ─── PLANIFICADOR DE RUTAS ──────────────────────────── */
+.plan-entrega-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  transition: background .15s;
+  cursor: pointer;
+}
+.plan-entrega-row:hover { background: var(--bg-card2); }
+.plan-entrega-row.selected { background: var(--blue-glow); border-left: 3px solid var(--blue); }
+.plan-entrega-row input[type=checkbox] { width:16px;height:16px;accent-color:var(--blue);flex-shrink:0;cursor:pointer; }
+.plan-zona-header {
+  background: var(--bg-card2);
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--white-dim);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plan-chofer-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all .18s;
+  font-family: var(--font-body);
+}
+.plan-chofer-btn.active { border-color: var(--blue); background: var(--blue); color: #fff; }
+.plan-chofer-btn:not(.active) { background: var(--bg-card2); border-color: var(--border); color: var(--white-dim); }
+.plan-chofer-btn:hover:not(.active) { border-color: var(--blue); color: var(--blue-light); }
+
 </style>
 </head>
 <body>
@@ -1123,6 +1164,11 @@ html { -webkit-text-size-adjust: 100%; }
       <div class="nav-item" onclick="navigate('ruta')" data-page="ruta">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
         Ruta del Día
+      </div>
+      <div class="nav-item" onclick="navigate('planificar')" data-page="planificar">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+        Planificar Rutas
+        <span class="nav-badge" id="badge-planificar" style="background:#FF8C00">0</span>
       </div>
       <div class="nav-item" onclick="navigate('rutachofer')" data-page="rutachofer">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/></svg>
@@ -1588,6 +1634,87 @@ html { -webkit-text-size-adjust: 100%; }
             <div class="empty-icon">👤</div>
             <p>No hay vendedores registrados.<br>Agregá tu equipo con el botón <strong>Nuevo Vendedor</strong>.</p>
           </div>
+        </div>
+      </div>
+
+      <!-- ══════════ PAGE: PLANIFICAR RUTAS ══════════ -->
+      <div class="page" id="page-planificar">
+        <div class="section-head">
+          <h2>Planificar Rutas <small>Asignación de entregas a choferes y generación de rutas</small></h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm" onclick="seleccionarTodas()">☑️ Seleccionar todas</button>
+            <button class="btn btn-secondary btn-sm" onclick="deseleccionarTodas()">□ Deseleccionar</button>
+          </div>
+        </div>
+
+        <!-- Dirección base -->
+        <div class="card mb-4" style="border-color:var(--blue);background:var(--blue-glow)">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-size:18px">📍</span>
+            <div>
+              <div style="font-size:11px;color:var(--white-dim);margin-bottom:2px">PUNTO DE SALIDA Y REGRESO</div>
+              <div style="font-weight:700;font-size:14px" id="plan-dir-base">Cervantes 950 casi Venezuela, Asunción, Paraguay</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px" id="plan-layout">
+
+          <!-- Lista de entregas sin asignar -->
+          <div>
+            <div class="card" style="padding:0;overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                <div style="font-family:var(--font-display);font-weight:700;font-size:14px">
+                  📦 Entregas sin asignar
+                  <span id="plan-count-sin" style="background:var(--yellow-bg);color:var(--yellow);border-radius:99px;padding:2px 8px;font-size:12px;margin-left:6px">0</span>
+                </div>
+                <div class="search-bar" style="max-width:220px">
+                  <svg width="13" height="13" viewBox="0 0 20 20" fill="var(--white-faint)"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+                  <input type="text" id="plan-search" placeholder="Buscar..." oninput="renderPlanificar()">
+                </div>
+              </div>
+
+              <!-- Filtro por zona -->
+              <div style="padding:8px 16px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                <span style="font-size:11px;color:var(--white-dim)">Zona:</span>
+                <div id="plan-zona-filtros" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+              </div>
+
+              <div id="plan-lista" style="max-height:460px;overflow-y:auto"></div>
+              <div class="empty-state hidden" id="plan-empty">
+                <div class="empty-icon">✅</div>
+                <p>Todas las entregas están asignadas a un chofer.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel de asignación -->
+          <div>
+            <!-- Selección actual -->
+            <div class="card mb-4">
+              <div style="font-family:var(--font-display);font-weight:700;font-size:14px;margin-bottom:12px">
+                ✅ Seleccionadas
+                <span id="plan-count-sel" style="background:var(--blue-glow);color:var(--blue-light);border-radius:99px;padding:2px 8px;font-size:12px;margin-left:6px">0</span>
+              </div>
+              <div id="plan-sel-preview" style="font-size:12px;color:var(--white-dim);margin-bottom:14px;max-height:100px;overflow-y:auto">
+                Seleccioná entregas de la lista
+              </div>
+
+              <div style="font-size:12px;color:var(--white-dim);margin-bottom:8px;font-weight:600">Asignar a:</div>
+              <div id="plan-choferes-btns" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+
+              <button class="btn btn-primary" style="width:100%" onclick="asignarSeleccionadas()">
+                ✅ Asignar seleccionadas
+              </button>
+            </div>
+
+            <!-- Rutas generadas -->
+            <div class="card">
+              <div style="font-family:var(--font-display);font-weight:700;font-size:14px;margin-bottom:14px">🗺️ Rutas del día</div>
+              <div id="plan-rutas-resumen"></div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -2461,7 +2588,11 @@ function iniciarListenersFirebase() {
     renderEntregas();
     renderRuta();
     renderRutaChofer();
+    if (document.getElementById('page-planificar')?.classList.contains('active')) renderPlanificar();
     updateBadges();
+    // Badge planificar
+    const bp2 = document.getElementById('badge-planificar');
+    if (bp2) bp2.textContent = APP.entregas.filter(e => !e.chofer && (e.estado==='pending'||e.estado==='transit')).length;
     // Si estamos en vista chofer, actualizar también
     if (APP._choferViewActivo) renderChoferView(APP._choferViewActivo);
   });
@@ -2645,6 +2776,7 @@ const PAGE_TITLES = {
   entregas: 'Entregas del Día',
   nueva: 'Nueva Entrega',
   ruta: 'Ruta del Día',
+  planificar: 'Planificar Rutas',
   rutachofer: 'Ruta por Chofer',
   proveedores: 'Proveedores',
   vendedores: 'Vendedores',
@@ -2673,6 +2805,7 @@ function navigate(page) {
 
   // Re-renderizar según la página
   if (page === 'dashboard')   renderDashboard();
+  if (page === 'planificar')   renderPlanificar();
   if (page === 'entregas')    renderEntregas();
   if (page === 'clientes')    renderClientes();
   if (page === 'ruta')        renderRuta();
@@ -5265,6 +5398,278 @@ function limpiarProveedor() {
 
 function poblarSelectProveedor() {
   // Para futura integración con select de proveedores
+}
+
+
+
+// ─── PLANIFICADOR DE RUTAS ────────────────────────────────
+
+const DIR_BASE = 'Cervantes 950 casi Venezuela, Asunción, Paraguay';
+let _planSeleccionadas = new Set();
+let _planChoferActivo = null;
+let _planZonaFiltro = '';
+
+function renderPlanificar() {
+  const lista     = document.getElementById('plan-lista');
+  const empty     = document.getElementById('plan-empty');
+  const countSin  = document.getElementById('plan-count-sin');
+  const countSel  = document.getElementById('plan-count-sel');
+  const selPreview= document.getElementById('plan-sel-preview');
+  if (!lista) return;
+
+  // Actualizar dirección base
+  const dirEl = document.getElementById('plan-dir-base');
+  if (dirEl) dirEl.textContent = APP.config.direccionBase || DIR_BASE;
+
+  const filtro = document.getElementById('plan-search')?.value.toLowerCase() || '';
+
+  // Entregas sin chofer asignado (pending o transit)
+  let sinAsignar = APP.entregas.filter(e =>
+    (!e.chofer || e.chofer === '') &&
+    (e.estado === 'pending' || e.estado === 'transit')
+  );
+
+  if (filtro) sinAsignar = sinAsignar.filter(e =>
+    (e.cliente||'').toLowerCase().includes(filtro) ||
+    (e.direccion||'').toLowerCase().includes(filtro) ||
+    (e.zona||'').toLowerCase().includes(filtro)
+  );
+
+  if (_planZonaFiltro) sinAsignar = sinAsignar.filter(e => e.zona === _planZonaFiltro);
+
+  // Actualizar contadores
+  if (countSin) countSin.textContent = sinAsignar.length;
+  if (countSel) countSel.textContent = _planSeleccionadas.size;
+
+  // Badge nav
+  const badge = document.getElementById('badge-planificar');
+  if (badge) badge.textContent = APP.entregas.filter(e => !e.chofer && (e.estado==='pending'||e.estado==='transit')).length;
+
+  // Preview seleccionadas
+  if (selPreview) {
+    if (_planSeleccionadas.size === 0) {
+      selPreview.textContent = 'Seleccioná entregas de la lista';
+    } else {
+      const sels = APP.entregas.filter(e => _planSeleccionadas.has(e.id));
+      selPreview.innerHTML = sels.map(e =>
+        `<div style="padding:3px 0;border-bottom:1px solid var(--border)">📍 ${e.cliente} — ${e.zona||'Sin zona'}</div>`
+      ).join('');
+    }
+  }
+
+  // Filtros de zona
+  const zonas = [...new Set(sinAsignar.map(e => e.zona).filter(Boolean))].sort();
+  const zonaFiltros = document.getElementById('plan-zona-filtros');
+  if (zonaFiltros) {
+    zonaFiltros.innerHTML = `<button onclick="filtrarZona('')" style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${!_planZonaFiltro?'var(--blue)':'var(--border)'};background:${!_planZonaFiltro?'var(--blue)':'transparent'};color:${!_planZonaFiltro?'#fff':'var(--white-dim)'}">Todas</button>` +
+      zonas.map(z => `<button onclick="filtrarZona('${z}')" style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${_planZonaFiltro===z?'var(--blue)':'var(--border)'};background:${_planZonaFiltro===z?'var(--blue)':'transparent'};color:${_planZonaFiltro===z?'#fff':'var(--white-dim)'}">${z}</button>`).join('');
+  }
+
+  // Botones de choferes
+  const chofsEl = document.getElementById('plan-choferes-btns');
+  if (chofsEl) {
+    const todos = [...(APP.choferes||[]), ...(APP.tecnicos||[]).map(t => ({...t, esTecnico: true}))];
+    chofsEl.innerHTML = todos.map(c =>
+      `<button class="plan-chofer-btn ${_planChoferActivo === c.nombre ? 'active' : ''}"
+        onclick="seleccionarChoferPlan('${c.nombre}')">
+        ${c.esTecnico ? '🛠️' : (VEHICULO_ICONS[c.vehiculo]||'🚗')} ${c.nombre}
+      </button>`
+    ).join('');
+    if (todos.length === 0) chofsEl.innerHTML = '<div style="font-size:12px;color:var(--white-faint)">No hay choferes registrados</div>';
+  }
+
+  // Agrupar por zona
+  const porZona = {};
+  sinAsignar.forEach(e => {
+    const z = e.zona || 'Sin zona';
+    if (!porZona[z]) porZona[z] = [];
+    porZona[z].push(e);
+  });
+
+  if (sinAsignar.length === 0) {
+    lista.innerHTML = '';
+    empty.classList.remove('hidden');
+    renderResumenRutas();
+    return;
+  }
+  empty.classList.add('hidden');
+  lista.innerHTML = '';
+
+  Object.entries(porZona).sort().forEach(([zona, entregas]) => {
+    // Header de zona
+    lista.innerHTML += `
+      <div class="plan-zona-header">
+        🗺️ ${zona}
+        <span style="background:var(--yellow-bg);color:var(--yellow);border-radius:99px;padding:1px 7px;font-size:10px">${entregas.length}</span>
+        <button onclick="seleccionarZona('${zona}')" style="margin-left:auto;background:transparent;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer;color:var(--white-dim)">Seleccionar zona</button>
+      </div>`;
+
+    entregas.forEach(e => {
+      const sel = _planSeleccionadas.has(e.id);
+      lista.innerHTML += `
+        <div class="plan-entrega-row ${sel ? 'selected' : ''}" onclick="toggleSeleccion('${e.id}')">
+          <input type="checkbox" ${sel ? 'checked' : ''} onclick="event.stopPropagation();toggleSeleccion('${e.id}')">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.cliente}</div>
+            <div style="font-size:11.5px;color:var(--white-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📍 ${e.direccion}</div>
+            ${e.vendedor ? `<div style="font-size:11px;color:var(--blue-light)">👤 ${e.vendedor}</div>` : ''}
+          </div>
+          <div style="flex-shrink:0">
+            ${e.tipo === 'cobranza' ? '<span style="font-size:10px;background:#00D68F18;color:#00A870;border-radius:4px;padding:2px 6px;font-weight:700">💰</span>' : ''}
+            ${e.tipo === 'retiro'   ? '<span style="font-size:10px;background:#1E6FFF18;color:#4D8FFF;border-radius:4px;padding:2px 6px;font-weight:700">🔄</span>' : ''}
+            ${e.tipo === 'asistencia' ? '<span style="font-size:10px;background:#7C3AED18;color:#A855F7;border-radius:4px;padding:2px 6px;font-weight:700">🛠️</span>' : ''}
+          </div>
+        </div>`;
+    });
+  });
+
+  renderResumenRutas();
+}
+
+function filtrarZona(zona) {
+  _planZonaFiltro = zona;
+  renderPlanificar();
+}
+
+function toggleSeleccion(id) {
+  if (_planSeleccionadas.has(id)) _planSeleccionadas.delete(id);
+  else _planSeleccionadas.add(id);
+  renderPlanificar();
+}
+
+function seleccionarTodas() {
+  const sinAsignar = APP.entregas.filter(e => !e.chofer && (e.estado==='pending'||e.estado==='transit'));
+  sinAsignar.forEach(e => _planSeleccionadas.add(e.id));
+  renderPlanificar();
+}
+
+function deseleccionarTodas() {
+  _planSeleccionadas.clear();
+  renderPlanificar();
+}
+
+function seleccionarZona(zona) {
+  const deZona = APP.entregas.filter(e => e.zona === zona && !e.chofer && (e.estado==='pending'||e.estado==='transit'));
+  deZona.forEach(e => _planSeleccionadas.add(e.id));
+  renderPlanificar();
+}
+
+function seleccionarChoferPlan(nombre) {
+  _planChoferActivo = nombre;
+  renderPlanificar();
+}
+
+function asignarSeleccionadas() {
+  if (_planSeleccionadas.size === 0) { toast('Seleccioná al menos una entrega', 'error'); return; }
+  if (!_planChoferActivo) { toast('Seleccioná un chofer primero', 'error'); return; }
+
+  const ids = [..._planSeleccionadas];
+  const updates = {};
+  ids.forEach(id => { updates['entregas/' + id + '/chofer'] = _planChoferActivo; });
+
+  db.ref().update(updates).then(() => {
+    toast(`✅ ${ids.length} entregas asignadas a ${_planChoferActivo}`, 'success');
+    _planSeleccionadas.clear();
+    renderPlanificar();
+  }).catch(() => toast('Error al asignar entregas', 'error'));
+}
+
+function renderResumenRutas() {
+  const el = document.getElementById('plan-rutas-resumen');
+  if (!el) return;
+
+  const todos = [...(APP.choferes||[]), ...(APP.tecnicos||[]).map(t => ({...t, esTecnico:true}))];
+  if (todos.length === 0) { el.innerHTML = '<div style="font-size:12px;color:var(--white-faint)">Sin choferes registrados</div>'; return; }
+
+  el.innerHTML = todos.map(c => {
+    const asignadas = APP.entregas.filter(e => e.chofer === c.nombre && (e.estado==='pending'||e.estado==='transit'));
+    const entregadas = APP.entregas.filter(e => e.chofer === c.nombre && e.estado==='delivered').length;
+    return `
+      <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;border:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-weight:700;font-size:13px">${c.esTecnico?'🛠️':'🚗'} ${c.nombre}</div>
+          <div style="font-size:11px;color:var(--white-dim)">${entregadas} entregadas</div>
+        </div>
+        <div style="font-size:12px;color:var(--white-dim);margin-bottom:8px">${asignadas.length} paradas pendientes</div>
+        ${asignadas.length > 0 ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-xs" onclick="abrirRutaChoferMapsDesde('${c.nombre}')">📍 Ver ruta</button>
+          <button class="btn btn-primary btn-xs" onclick="enviarRutaChoferDesde('${c.nombre}')">📱 Enviar WA</button>
+        </div>` : '<div style="font-size:11px;color:var(--green)">✅ Sin paradas pendientes</div>'}
+      </div>`;
+  }).join('');
+}
+
+// ─── RUTAS CON PUNTO DE SALIDA Y REGRESO ─────────────────
+
+function abrirRutaChoferMapsDesde(nombreChofer) {
+  const activas = APP.entregas.filter(e =>
+    e.chofer === nombreChofer && (e.estado === 'pending' || e.estado === 'transit')
+  );
+  if (activas.length === 0) { toast('No hay paradas para este chofer', 'error'); return; }
+
+  const base = encodeURIComponent(APP.config.direccionBase || DIR_BASE);
+  const dirs = activas.map(e => encodeURIComponent(e.direccion + ', Asunción, Paraguay'));
+
+  // Google Maps con origen, waypoints y destino (regreso a base)
+  const url = `https://www.google.com/maps/dir/${base}/${dirs.join('/')}/${base}`;
+  window.open(url, '_blank');
+}
+
+function enviarRutaChoferDesde(nombreChofer) {
+  const activas = APP.entregas.filter(e =>
+    e.chofer === nombreChofer && (e.estado === 'pending' || e.estado === 'transit')
+  );
+  if (activas.length === 0) { toast('No hay paradas para enviar', 'error'); return; }
+
+  // Buscar WA del chofer o técnico
+  const ch = APP.choferes.find(x => x.nombre === nombreChofer);
+  const tc = (APP.tecnicos||[]).find(x => x.nombre === nombreChofer);
+  const persona = ch || tc;
+  const tel = persona?.wa?.replace(/\D/g,'') || '';
+
+  const base = encodeURIComponent(APP.config.direccionBase || DIR_BASE);
+  const dirs = activas.map(e => encodeURIComponent(e.direccion + ', Asunción, Paraguay'));
+  const mapsURL = `https://www.google.com/maps/dir/${base}/${dirs.join('/')}/${base}`;
+
+  const tiempoMin = calcularTiempoTotal(activas.length);
+  const lista = activas.map((e,i) =>
+    `${i+1}. ${e.cliente} — ${e.direccion}${e.zona?' ('+e.zona+')':''}`+
+    `${e.tipo==='cobranza'?' 💰':e.tipo==='retiro'?' 🔄':e.tipo==='asistencia'?' 🛠️':''}`
+  ).join('\n');
+
+  const msg = `🚚 *RUTA DEL DÍA — ${APP.config.empresa || 'Neo Logistic'}*\n\n` +
+    `👤 Chofer: ${nombreChofer}\n` +
+    `📍 Salida: ${APP.config.direccionBase || DIR_BASE}\n` +
+    `⏱️ Tiempo estimado: ${formatearTiempo(tiempoMin)}\n` +
+    `📦 Total paradas: ${activas.length}\n\n` +
+    `📋 *PARADAS:*\n${lista}\n\n` +
+    `🗺️ *RUTA GOOGLE MAPS (salida y regreso a base):*\n${mapsURL}\n\n` +
+    `_Sistema Neo Logistic_`;
+
+  window.open(`https://api.whatsapp.com/send?${tel?'phone='+tel+'&':''}text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// Override generarRutaChoferMaps para incluir punto de salida/regreso
+function generarRutaChoferMaps() {
+  const sel = document.getElementById('rc-selector');
+  const choferFiltro = sel ? sel.value : '';
+  let activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  if (choferFiltro) activas = activas.filter(e => e.chofer === choferFiltro || e.tecnico === choferFiltro);
+  if (activas.length === 0) { toast('No hay entregas para esta ruta', 'error'); return; }
+
+  const base = encodeURIComponent(APP.config.direccionBase || DIR_BASE);
+  const dirs = activas.map(e => encodeURIComponent(e.direccion + ', Asunción, Paraguay'));
+  window.open(`https://www.google.com/maps/dir/${base}/${dirs.join('/')}/${base}`, '_blank');
+}
+
+// Override generarRutaGoogle (ruta del día) también con base
+function generarRutaGoogle() {
+  const activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  if (activas.length === 0) { toast('No hay entregas pendientes', 'error'); return; }
+  const base = encodeURIComponent(APP.config.direccionBase || DIR_BASE);
+  const dirs = activas.map(e => encodeURIComponent(e.direccion + ', Asunción, Paraguay'));
+  window.open(`https://www.google.com/maps/dir/${base}/${dirs.join('/')}/${base}`, '_blank');
 }
 
 
