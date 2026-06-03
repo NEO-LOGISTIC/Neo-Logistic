@@ -1055,6 +1055,18 @@ html { -webkit-text-size-adjust: 100%; }
 .mapa-dot.reprog   { background:#FF4560; }
 .mapa-dot.camino   { background:#A855F7; }
 
+
+/* ─── FIX ESPACIOS VACÍOS ────────────────────────────── */
+#page-tecnicos .section-head,
+#page-proveedores .section-head,
+#page-choferes .section-head,
+#page-vendedores .section-head,
+#page-cobranzas .section-head {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+.page { padding-top: 0; }
+
 </style>
 </head>
 <body>
@@ -1274,9 +1286,10 @@ html { -webkit-text-size-adjust: 100%; }
       <div class="page active" id="page-dashboard">
         <div class="section-head">
           <h2>Dashboard Operativo <small>Resumen del día en tiempo real</small></h2>
-          <button class="btn btn-secondary btn-sm" onclick="generarRutaGoogle()">
-            📍 Ver Ruta en Maps
-          </button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary" onclick="generarRutaGoogle()">📍 Abrir en Maps</button>
+            <button class="btn btn-primary" onclick="abrirModalEnvioRuta()">📱 Enviar al chofer</button>
+          </div>
         </div>
 
         <div class="stats-grid">
@@ -1497,6 +1510,16 @@ html { -webkit-text-size-adjust: 100%; }
               <label>Observaciones</label>
               <input type="text" id="f-obs" placeholder="Instrucciones especiales...">
             </div>
+            <div class="form-group full-span">
+              <label>📍 Link Google Maps (opcional — para ubicación exacta)</label>
+              <input type="text" id="f-maps-link" placeholder="Pegá el link de Google Maps del cliente" oninput="extraerCoordenadas()">
+              <small style="color:var(--white-faint);font-size:11px;margin-top:3px;display:block">
+                En Google Maps → tocá el lugar → compartir → copiá el link. Las coordenadas se extraen automáticamente.
+              </small>
+              <div id="f-coords-preview" class="hidden" style="margin-top:6px;background:var(--green-bg);border:1px solid var(--green);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--green)">
+                ✅ Coordenadas detectadas: <span id="f-coords-text"></span>
+              </div>
+            </div>
           </div>
 
           <!-- Opción guardar como cliente -->
@@ -1537,18 +1560,18 @@ html { -webkit-text-size-adjust: 100%; }
 
         <!-- Config ruta -->
         <div class="card mb-4">
-          <div style="display:flex;gap:24px;flex-wrap:wrap">
-            <div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+            <div style="flex:1;min-width:180px">
               <div style="font-size:12px;color:var(--white-dim);margin-bottom:4px">Chofer</div>
-              <input type="text" id="ruta-chofer" placeholder="Nombre del chofer" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13.5px;padding:8px 12px;outline:none;min-width:180px" oninput="guardarConfigRuta()">
+              <select id="ruta-chofer-sel" onchange="onRutaDiaChoferChange()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13.5px;padding:8px 12px;outline:none;width:100%;cursor:pointer">
+                <option value="">— Seleccionar chofer —</option>
+              </select>
+              <input type="hidden" id="ruta-chofer">
+              <input type="hidden" id="ruta-tel">
             </div>
-            <div>
-              <div style="font-size:12px;color:var(--white-dim);margin-bottom:4px">Teléfono chofer (WhatsApp)</div>
-              <input type="text" id="ruta-tel" placeholder="+595 981 000000" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13.5px;padding:8px 12px;outline:none;min-width:200px" oninput="guardarConfigRuta()">
-            </div>
-            <div style="display:flex;align-items:flex-end">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
               <div style="background:var(--blue-glow);border:1px solid var(--border-bright);border-radius:var(--radius-sm);padding:8px 16px;font-family:var(--font-display);font-size:14px;font-weight:700">
-                ⏱️ Tiempo estimado: <span id="ruta-tiempo-est" style="color:var(--blue-light)">0 min</span>
+                ⏱️ <span id="ruta-tiempo-est" style="color:var(--blue-light)">0 min</span>
               </div>
             </div>
           </div>
@@ -1666,9 +1689,16 @@ html { -webkit-text-size-adjust: 100%; }
           <div>
             <div class="card" style="padding:0;overflow:hidden">
               <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-                <div style="font-family:var(--font-display);font-weight:700;font-size:14px">
-                  📦 Entregas sin asignar
-                  <span id="plan-count-sin" style="background:var(--yellow-bg);color:var(--yellow);border-radius:99px;padding:2px 8px;font-size:12px;margin-left:6px">0</span>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1">
+                  <div style="font-family:var(--font-display);font-weight:700;font-size:14px">
+                    Entregas del día
+                    <span id="plan-count-sin" style="background:var(--yellow-bg);color:var(--yellow);border-radius:99px;padding:2px 8px;font-size:12px;margin-left:6px">0</span>
+                  </div>
+                  <div style="display:flex;gap:6px">
+                    <button onclick="setPlanFiltro('sin')" id="plan-tab-sin" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--yellow);background:var(--yellow);color:#1A1000">Sin asignar</button>
+                    <button onclick="setPlanFiltro('con')" id="plan-tab-con" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--white-dim)">Asignadas</button>
+                    <button onclick="setPlanFiltro('todas')" id="plan-tab-todas" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--white-dim)">Todas</button>
+                  </div>
                 </div>
                 <div class="search-bar" style="max-width:220px">
                   <svg width="13" height="13" viewBox="0 0 20 20" fill="var(--white-faint)"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
@@ -2649,7 +2679,8 @@ function iniciarListenersFirebase() {
     APP.tecnicos = Object.values(data);
     renderTecnicos();
     poblarSelectTecnico();
-    poblarSelectoresChofer(); // actualizar selector ruta por chofer
+    poblarSelectoresChofer();
+    poblarSelectorRutaDia();
     updateBadges();
   });
 
@@ -2921,6 +2952,8 @@ function guardarEntrega() {
     tipo:      tipoVal,
     proveedor: document.getElementById('f-proveedor')?.value.trim() || '',
     obs:       document.getElementById('f-obs').value.trim(),
+    mapsLink:  document.getElementById('f-maps-link')?.value.trim() || '',
+    coords:    window._coordsActuales || null,
     estado:    document.getElementById('f-estado').value,
     horaAgregado: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
     fechaEntrega: null,
@@ -2968,7 +3001,7 @@ function guardarEntrega() {
 }
 
 function limpiarFormulario() {
-  ['f-codigo','f-cliente','f-direccion','f-telefono','f-obs'].forEach(id => {
+  ['f-codigo','f-cliente','f-direccion','f-telefono','f-obs','f-maps-link'].forEach(id => {
     document.getElementById(id).value = '';
   });
   const selV = document.getElementById('f-vendedor');
@@ -2982,6 +3015,8 @@ function limpiarFormulario() {
   limpiarProveedor();
   const guardarProv = document.getElementById('guardar-proveedor');
   if (guardarProv) guardarProv.checked = false;
+  window._coordsActuales = null;
+  const cp = document.getElementById('f-coords-preview'); if(cp) cp.classList.add('hidden');
   const manInp = document.getElementById('f-vendedor-manual');
   if (manInp) manInp.remove();
   const waRow = document.getElementById('f-vendedor-wa-row');
@@ -3151,7 +3186,7 @@ function renderClientes(filtro = '') {
   mostrar.forEach(c => {
     tbody.innerHTML += `<tr>
       <td><code style="font-size:11px;background:var(--bg-input);padding:2px 6px;border-radius:4px">${c.codigo || '—'}</code></td>
-      <td><strong>${c.nombre}</strong></td>
+      <td><strong>${c.nombre}</strong>${c.coords ? ' <span style="color:var(--green);font-size:11px" title="Coordenadas exactas">📍</span>' : ''}</td>
       <td style="color:var(--white-dim);max-width:200px">${c.direccion}</td>
       <td>${c.telefono ? `<a href="tel:${c.telefono}" style="color:var(--blue-light)">${c.telefono}</a>` : '—'}</td>
       <td>${c.zona || '—'}</td>
@@ -3279,7 +3314,7 @@ function procesarArchivoExcel(file) {
       clientesParsed.slice(0, 20).forEach(c => {
         tbody.innerHTML += `<tr>
           <td>${c.codigo || '—'}</td>
-          <td><strong>${c.nombre}</strong></td>
+          <td><strong>${c.nombre}</strong>${c.coords ? ' <span style="color:var(--green);font-size:11px" title="Coordenadas exactas">📍</span>' : ''}</td>
           <td style="color:var(--white-dim)">${c.direccion}</td>
           <td>${c.telefono || '—'}</td>
           <td>${c.zona || '—'}</td>
@@ -4506,21 +4541,35 @@ function aplicarRol(rol) {
   }
 
   if (rol === 'chofer') {
-    ['ruta','rutachofer','clientes','vendedores','choferes','importar','config','estadisticas'].forEach(page => {
+    const u2 = APP._usuario || {};
+    // Antonio (ch_001) y Cristian (tc_002) pueden planificar rutas
+    const esPlanificador = u2.id === 'ch_001' || u2.id === 'tc_002';
+    const ocultarChofer = esPlanificador
+      ? ['clientes','vendedores','choferes','importar','config','estadisticas']
+      : ['ruta','rutachofer','planificar','clientes','vendedores','choferes','importar','config','estadisticas'];
+    ocultarChofer.forEach(page => {
       const el = document.querySelector(`.nav-item[data-page="${page}"]`);
       if (el) el.style.display = 'none';
     });
-    navigate('entregas');
+    if (esPlanificador) {
+      navigate('planificar');
+    } else {
+      navigate('entregas');
+    }
   }
 
   if (rol === 'tecnico') {
-    // Técnico ve sus asistencias + entregas, puede marcar asistido/entregado/retirado
-    ['clientes','vendedores','choferes','importar','config'].forEach(page => {
+    const u2 = APP._usuario || {};
+    const esPlanificador = u2.id === 'tc_002'; // Cristian planifica rutas técnicas
+    const ocultarTec = esPlanificador
+      ? ['clientes','vendedores','choferes','importar','config']
+      : ['planificar','clientes','vendedores','choferes','importar','config'];
+    ocultarTec.forEach(page => {
       const el = document.querySelector(`.nav-item[data-page="${page}"]`);
       if (el) el.style.display = 'none';
     });
-    // Mostrar botones de técnico en modal estado
     agregarTabsTecnico();
+    if (esPlanificador) navigate('planificar');
   }
 
   if (rol === 'operaciones' || rol === 'compras_cobranzas') {
@@ -4812,7 +4861,7 @@ function renderAnalisisRecompra(entregas) {
               proxima = prox.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit' });
             }
             return `<tr>
-              <td><strong>${c.nombre}</strong></td>
+              <td><strong>${c.nombre}</strong>${c.coords ? ' <span style="color:var(--green);font-size:11px" title="Coordenadas exactas">📍</span>' : ''}</td>
               <td>${c.zona}</td>
               <td>${c.vendedor}</td>
               <td><strong style="font-family:var(--font-display)">${c.count}</strong></td>
@@ -5467,10 +5516,23 @@ function renderPlanificar() {
   const filtro = document.getElementById('plan-search')?.value.toLowerCase() || '';
 
   // Entregas sin chofer asignado (pending o transit)
-  let sinAsignar = APP.entregas.filter(e =>
-    (!e.chofer || e.chofer === '') &&
-    (e.estado === 'pending' || e.estado === 'transit')
+  const u = APP._usuario || {};
+  const esTecPlanif = u.id === 'tc_002';
+  
+  // Filtrar según tab seleccionado
+  let todasActivas = APP.entregas.filter(e =>
+    (e.estado === 'pending' || e.estado === 'transit') &&
+    (esTecPlanif ? e.tipo === 'asistencia' : true)
   );
+
+  let sinAsignar;
+  if (_planFiltroAsig === 'sin') {
+    sinAsignar = todasActivas.filter(e => !e.chofer || e.chofer === '');
+  } else if (_planFiltroAsig === 'con') {
+    sinAsignar = todasActivas.filter(e => e.chofer && e.chofer !== '');
+  } else {
+    sinAsignar = todasActivas;
+  }
 
   if (filtro) sinAsignar = sinAsignar.filter(e =>
     (e.cliente||'').toLowerCase().includes(filtro) ||
@@ -5544,7 +5606,7 @@ function renderPlanificar() {
       <div class="plan-zona-header">
         🗺️ ${zona}
         <span style="background:var(--yellow-bg);color:var(--yellow);border-radius:99px;padding:1px 7px;font-size:10px">${entregas.length}</span>
-        <button onclick="seleccionarZona('${zona}')" style="margin-left:auto;background:transparent;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer;color:var(--white-dim)">Seleccionar zona</button>
+        <button onclick="seleccionarZona('${zona}')" style="margin-left:auto;background:var(--blue);border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;color:#fff">☑️ Seleccionar zona</button>
       </div>`;
 
     entregas.forEach(e => {
@@ -5555,8 +5617,12 @@ function renderPlanificar() {
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.cliente}</div>
             <div style="font-size:11.5px;color:var(--white-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📍 ${e.direccion}</div>
-            ${e.vendedor ? `<div style="font-size:11px;color:var(--blue-light)">👤 ${e.vendedor}</div>` : ''}
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px">
+              ${e.vendedor ? `<span style="font-size:11px;color:var(--blue-light)">👤 ${e.vendedor}</span>` : ''}
+              ${e.chofer ? `<span style="font-size:11px;color:var(--green)">🚗 ${e.chofer}</span>` : '<span style="font-size:11px;color:var(--yellow)">Sin chofer</span>'}
+            </div>
           </div>
+          ${e.chofer ? `<button onclick="event.stopPropagation();desasignarChofer('${e.id}')" style="background:var(--red-bg);border:1px solid var(--red);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--red);cursor:pointer;flex-shrink:0" title="Desasignar">🚫</button>` : ''}
           <div style="flex-shrink:0">
             ${e.tipo === 'cobranza' ? '<span style="font-size:10px;background:#00D68F18;color:#00A870;border-radius:4px;padding:2px 6px;font-weight:700">💰</span>' : ''}
             ${e.tipo === 'retiro'   ? '<span style="font-size:10px;background:#1E6FFF18;color:#4D8FFF;border-radius:4px;padding:2px 6px;font-weight:700">🔄</span>' : ''}
@@ -5651,17 +5717,22 @@ function generarURLMaps(paradas, base) {
 
   if (paradas.length === 0) return null;
 
-  // Formato que funciona en celular Y computadora sin API key
+  // Usar coordenadas exactas si están disponibles, sino usar dirección de texto
+  function getDestino(e) {
+    if (e.coords && e.coords.lat && e.coords.lng) {
+      return encodeURIComponent(`${e.coords.lat},${e.coords.lng}`);
+    }
+    return encodeURIComponent(e.direccion + ciudad);
+  }
+
   if (paradas.length === 1) {
-    // Una sola parada — abrir directo
-    const dest = encodeURIComponent(paradas[0].direccion + ciudad);
+    const dest = getDestino(paradas[0]);
     return `https://www.google.com/maps/dir/?api=1&origin=${baseEnc}&destination=${dest}&travelmode=driving`;
   }
 
-  // Múltiples paradas — origin, waypoints, destination
   const origin      = baseEnc;
-  const destination = baseEnc; // regreso a base
-  const waypoints   = paradas.map(e => encodeURIComponent(e.direccion + ciudad)).join('|');
+  const destination = baseEnc;
+  const waypoints   = paradas.map(e => getDestino(e)).join('|');
 
   return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
 }
@@ -5917,6 +5988,248 @@ async function actualizarMapaLeaflet() {
 // Se llama desde el listener de entregas
 function refrescarMapaSiVisible() {
   if (_mapaVisible) actualizarMapaLeaflet();
+}
+
+
+
+// ─── AUTO ORGANIZAR RUTAS POR ZONA ───────────────────────
+
+function autoOrganizarRutas() {
+  const sinAsignar = APP.entregas.filter(e =>
+    (!e.chofer || e.chofer === '') &&
+    (e.estado === 'pending' || e.estado === 'transit')
+  );
+
+  if (sinAsignar.length === 0) {
+    toast('No hay entregas sin asignar', 'info');
+    return;
+  }
+
+  // Agrupar por zona
+  const porZona = {};
+  sinAsignar.forEach(e => {
+    const z = e.zona || 'Sin zona';
+    if (!porZona[z]) porZona[z] = [];
+    porZona[z].push(e);
+  });
+
+  const zonas = Object.keys(porZona).sort();
+  const choferes = [...(APP.choferes||[]), ...(APP.tecnicos||[]).map(t=>({...t,esTecnico:true}))];
+
+  // Mostrar modal de organización
+  let html = `
+    <div style="font-size:13px;color:var(--white-dim);margin-bottom:16px">
+      Se encontraron <strong style="color:var(--white)">${zonas.length} zonas</strong> con ${sinAsignar.length} entregas en total.
+      Asigná cada zona a un chofer:
+    </div>`;
+
+  zonas.forEach((zona, i) => {
+    const ents = porZona[zona];
+    html += `
+      <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;border:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:13px">🗺️ ${zona}</div>
+            <div style="font-size:11px;color:var(--white-dim)">${ents.length} entregas</div>
+          </div>
+          <select id="zona-chofer-${i}" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:12px;padding:6px 10px;outline:none;cursor:pointer">
+            <option value="">Sin asignar</option>
+            ${choferes.map(c => `<option value="${c.nombre}">${c.esTecnico?'🛠️':'🚗'} ${c.nombre}</option>`).join('')}
+          </select>
+        </div>
+        <div style="font-size:11px;color:var(--white-dim)">${ents.slice(0,3).map(e=>e.cliente).join(', ')}${ents.length>3?'...':''}</div>
+      </div>`;
+  });
+
+  // Mostrar en modal
+  const modal = document.getElementById('modal-estado');
+  const info  = document.getElementById('modal-estado-info');
+  const h3    = modal.querySelector('h3');
+
+  if (h3)   h3.textContent = '⚡ Organizar rutas por zona';
+  if (info) info.innerHTML = html;
+
+  // Reemplazar botones del modal
+  const btnRow = modal.querySelector('.btn-row');
+  if (btnRow) {
+    btnRow.innerHTML = `
+      <button class="btn btn-primary" onclick="confirmarAutoOrganizar(${JSON.stringify(zonas)})">✅ Confirmar asignación</button>
+      <button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-estado')">Cancelar</button>`;
+  }
+  // Ocultar grid de estados
+  const grid = modal.querySelector('div[style*="grid-template-columns"]');
+  if (grid) grid.style.display = 'none';
+
+  modal.classList.remove('hidden');
+}
+
+function confirmarAutoOrganizar(zonas) {
+  const sinAsignar = APP.entregas.filter(e =>
+    (!e.chofer || e.chofer === '') &&
+    (e.estado === 'pending' || e.estado === 'transit')
+  );
+  const porZona = {};
+  sinAsignar.forEach(e => {
+    const z = e.zona || 'Sin zona';
+    if (!porZona[z]) porZona[z] = [];
+    porZona[z].push(e);
+  });
+
+  const updates = {};
+  let asignadas = 0;
+
+  zonas.forEach((zona, i) => {
+    const chofer = document.getElementById(`zona-chofer-${i}`)?.value;
+    if (!chofer) return;
+    const ents = porZona[zona] || [];
+    ents.forEach(e => {
+      updates[`entregas/${e.id}/chofer`] = chofer;
+      asignadas++;
+    });
+  });
+
+  if (Object.keys(updates).length === 0) {
+    toast('No asignaste ninguna zona', 'error');
+    return;
+  }
+
+  db.ref().update(updates)
+    .then(() => {
+      toast(`✅ ${asignadas} entregas asignadas`, 'success');
+      cerrarModal('modal-estado');
+      // Restaurar modal
+      const modal = document.getElementById('modal-estado');
+      const h3 = modal.querySelector('h3');
+      const grid = modal.querySelector('div[style*="grid-template-columns"]');
+      if (h3) h3.textContent = 'Cambiar Estado de Entrega';
+      if (grid) grid.style.display = '';
+    })
+    .catch(() => toast('Error al asignar', 'error'));
+}
+
+function abrirOrdenEnMaps() {
+  const sinAsignar = APP.entregas.filter(e =>
+    (!e.chofer || e.chofer === '') &&
+    (e.estado === 'pending' || e.estado === 'transit')
+  );
+  if (sinAsignar.length === 0) { toast('No hay entregas sin asignar', 'error'); return; }
+  const url = generarURLMaps(sinAsignar, APP.config.direccionBase || DIR_BASE);
+  if (url) window.open(url, '_blank');
+}
+
+
+
+// ─── SELECTOR CHOFER EN RUTA DEL DÍA ─────────────────────
+
+function poblarSelectorRutaDia() {
+  const sel = document.getElementById('ruta-chofer-sel');
+  if (!sel) return;
+  const val = sel.value;
+  sel.innerHTML = '<option value="">— Seleccionar chofer —</option>';
+  const todos = [...(APP.choferes||[]), ...(APP.tecnicos||[]).map(t=>({...t,esTecnico:true}))];
+  todos.forEach(c => {
+    sel.innerHTML += `<option value="${c.nombre}" data-wa="${c.wa||''}">${c.esTecnico?'🛠️':(VEHICULO_ICONS[c.vehiculo]||'🚗')} ${c.nombre}</option>`;
+  });
+  if (val) sel.value = val;
+}
+
+function onRutaDiaChoferChange() {
+  const sel = document.getElementById('ruta-chofer-sel');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('ruta-chofer').value = sel.value;
+  document.getElementById('ruta-tel').value = opt?.dataset?.wa || '';
+  APP.ruta.chofer = sel.value;
+  APP.ruta.telefono = opt?.dataset?.wa || '';
+  guardarStorage();
+}
+
+
+
+// ─── EXTRAER COORDENADAS DE LINK GOOGLE MAPS ─────────────
+
+function extraerCoordenadas() {
+  const input = document.getElementById('f-maps-link');
+  const preview = document.getElementById('f-coords-preview');
+  const coordsText = document.getElementById('f-coords-text');
+  if (!input || !preview) return;
+
+  const link = input.value.trim();
+  if (!link) {
+    preview.classList.add('hidden');
+    window._coordsActuales = null;
+    return;
+  }
+
+  // Patrones para extraer coordenadas de distintos formatos de Google Maps
+  const patrones = [
+    /@(-?\d+\.\d+),(-?\d+\.\d+)/,           // @lat,lng
+    /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,        // !3dlat!4dlng
+    /q=(-?\d+\.\d+),(-?\d+\.\d+)/,           // q=lat,lng
+    /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,          // ll=lat,lng
+    /place\/(-?\d+\.\d+),(-?\d+\.\d+)/,     // place/lat,lng
+    /maps\/(-?\d+\.\d+),(-?\d+\.\d+)/,      // maps/lat,lng
+  ];
+
+  let lat = null, lng = null;
+
+  for (const patron of patrones) {
+    const match = link.match(patron);
+    if (match) {
+      lat = parseFloat(match[1]);
+      lng = parseFloat(match[2]);
+      // Validar que sean coordenadas de Paraguay aproximadamente
+      if (lat < -30 || lat > -19 || lng < -63 || lng > -54) {
+        // Intentar siguiente patrón
+        lat = null; lng = null;
+        continue;
+      }
+      break;
+    }
+  }
+
+  if (lat && lng) {
+    window._coordsActuales = { lat, lng };
+    if (coordsText) coordsText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    preview.classList.remove('hidden');
+  } else {
+    window._coordsActuales = null;
+    preview.classList.add('hidden');
+    // Si no se pudieron extraer, mostrar aviso suave
+    if (link.includes('maps') || link.includes('goo.gl')) {
+      if (coordsText) coordsText.textContent = 'No se pudieron extraer coordenadas de este link';
+      preview.style.background = 'var(--yellow-bg)';
+      preview.style.borderColor = 'var(--yellow)';
+      preview.style.color = 'var(--yellow)';
+      preview.classList.remove('hidden');
+    }
+  }
+}
+
+
+
+// ─── FILTRO PLANIFICADOR (sin asignar / asignadas / todas) ─
+
+let _planFiltroAsig = 'sin'; // 'sin', 'con', 'todas'
+
+function setPlanFiltro(filtro) {
+  _planFiltroAsig = filtro;
+  // Actualizar tabs
+  ['sin','con','todas'].forEach(f => {
+    const btn = document.getElementById('plan-tab-' + f);
+    if (!btn) return;
+    if (f === filtro) {
+      const colores = {sin:'var(--yellow)', con:'var(--green)', todas:'var(--blue)'};
+      const textCol = {sin:'#1A1000', con:'#0A1A12', todas:'#fff'};
+      btn.style.background = colores[f];
+      btn.style.borderColor = colores[f];
+      btn.style.color = textCol[f];
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.borderColor = 'var(--border)';
+      btn.style.color = 'var(--white-dim)';
+    }
+  });
+  renderPlanificar();
 }
 
 
