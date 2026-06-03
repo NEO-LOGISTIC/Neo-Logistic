@@ -947,63 +947,6 @@ html { -webkit-text-size-adjust: 100%; }
 
 
 
-/* ─── MAPA EMBEBIDO ──────────────────────────────────── */
-#ruta-layout { display: flex; gap: 16px; }
-#ruta-panel-lista { flex: 1; min-width: 0; }
-#ruta-panel-mapa {
-  width: 0; overflow: hidden;
-  transition: width .3s ease;
-  flex-shrink: 0;
-}
-#ruta-panel-mapa.open { width: 420px; }
-#mapa-container {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  height: 100%;
-  min-height: 500px;
-  display: flex;
-  flex-direction: column;
-}
-#mapa-topbar {
-  background: var(--bg-card2);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-#mapa-topbar span { flex: 1; font-size: 13px; font-weight: 600; color: var(--white); }
-#mapa-iframe-wrap { flex: 1; position: relative; }
-#mapa-iframe-wrap iframe { width: 100%; height: 100%; border: none; min-height: 420px; }
-#mapa-placeholder {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  background: var(--bg-input);
-  color: var(--white-faint);
-  font-size: 13px; gap: 10px;
-}
-#mapa-placeholder .mapa-icon { font-size: 40px; opacity: .4; }
-#mapa-bar {
-  background: var(--bg-card2);
-  border-top: 1px solid var(--border);
-  padding: 8px 14px;
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-#btn-toggle-mapa { transition: all .2s; }
-#btn-toggle-mapa.active { background: var(--blue); color: #fff; border-color: var(--blue); }
-
-@media (max-width: 900px) {
-  #ruta-layout { flex-direction: column; }
-  #ruta-panel-mapa.open { width: 100%; }
-}
-
 
 /* ─── BOTONES RUTA CHOFER ────────────────────────────── */
 #page-rutachofer .btn {
@@ -1052,6 +995,24 @@ html { -webkit-text-size-adjust: 100%; }
 .plan-chofer-btn.active { border-color: var(--blue); background: var(--blue); color: #fff; }
 .plan-chofer-btn:not(.active) { background: var(--bg-card2); border-color: var(--border); color: var(--white-dim); }
 .plan-chofer-btn:hover:not(.active) { border-color: var(--blue); color: var(--blue-light); }
+
+
+/* ─── BOTONES UNIFICADOS ─────────────────────────────── */
+/* Todos los botones btn sin modificador tienen el mismo tamaño base */
+.btn { min-height: 40px; }
+.btn-sm { min-height: 34px; }
+.btn-xs { min-height: 28px; }
+
+/* Topbar botones consistentes */
+#topbar .topbar-btn { min-height: 36px; padding: 7px 14px; }
+
+/* Planificar botones zona */
+.plan-zona-header button { min-height: 26px; }
+
+
+@media (max-width: 860px) {
+  #plan-layout { grid-template-columns: 1fr !important; }
+}
 
 </style>
 </head>
@@ -1355,7 +1316,7 @@ html { -webkit-text-size-adjust: 100%; }
           <div class="flex gap-2">
             <div class="search-bar">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="var(--white-faint)"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
-              <input type="text" id="search-entregas" placeholder="Buscar cliente, dirección..." oninput="filtrarEntregas()">
+              <input type="text" id="search-entregas" placeholder="Buscar cliente, código, dirección..." oninput="filtrarEntregas()">
             </div>
             <select id="filter-estado" onchange="filtrarEntregas()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13px;padding:8px 12px;outline:none;cursor:pointer">
               <option value="">Todos</option>
@@ -1642,8 +1603,8 @@ html { -webkit-text-size-adjust: 100%; }
         <div class="section-head">
           <h2>Planificar Rutas <small>Asignación de entregas a choferes y generación de rutas</small></h2>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-secondary btn-sm" onclick="seleccionarTodas()">☑️ Seleccionar todas</button>
-            <button class="btn btn-secondary btn-sm" onclick="deseleccionarTodas()">□ Deseleccionar</button>
+            <button class="btn btn-secondary" onclick="seleccionarTodas()">☑️ Seleccionar todas</button>
+            <button class="btn btn-red" onclick="deseleccionarTodas()">✕ Deseleccionar todo</button>
           </div>
         </div>
 
@@ -1658,7 +1619,7 @@ html { -webkit-text-size-adjust: 100%; }
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px" id="plan-layout">
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:16px" id="plan-layout">
 
           <!-- Lista de entregas sin asignar -->
           <div>
@@ -1745,36 +1706,11 @@ html { -webkit-text-size-adjust: 100%; }
 
         <div id="rc-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
 
-        <!-- Layout con panel lista + panel mapa -->
-        <div id="ruta-layout">
-          <div id="ruta-panel-lista">
-            <div class="card">
-              <div id="rc-lista"></div>
-              <div class="empty-state hidden" id="rc-empty">
-                <div class="empty-icon">🗺️</div>
-                <p>Seleccioná un chofer o agregá entregas pendientes.</p>
-              </div>
-            </div>
-          </div>
-
-          <div id="ruta-panel-mapa">
-            <div id="mapa-container">
-              <div id="mapa-topbar">
-                <span id="mapa-titulo">🗺️ Mapa de ruta</span>
-                <button class="btn btn-ghost btn-xs" onclick="toggleMapa()">✕ Cerrar</button>
-              </div>
-              <div id="mapa-iframe-wrap">
-                <div id="mapa-placeholder">
-                  <div class="mapa-icon">📍</div>
-                  <div>Seleccioná un chofer para ver su ruta</div>
-                  <button class="btn btn-secondary btn-sm" onclick="generarRutaChoferMaps()">Abrir en Google Maps</button>
-                </div>
-              </div>
-              <div id="mapa-bar">
-                <button class="btn btn-secondary btn-sm" style="flex:1" onclick="generarRutaChoferMaps()">📍 Abrir en Google Maps</button>
-                <button class="btn btn-primary btn-sm" style="flex:1" onclick="enviarRutaChoferWA()">📱 Enviar al chofer</button>
-              </div>
-            </div>
+        <div class="card">
+          <div id="rc-lista"></div>
+          <div class="empty-state hidden" id="rc-empty">
+            <div class="empty-icon">🗺️</div>
+            <p>Seleccioná un chofer o agregá entregas pendientes.</p>
           </div>
         </div>
       </div>
@@ -2542,6 +2478,18 @@ function seedVendedoresIniciales() {
 }
 
 
+
+// ─── SEED ENTREGAS DE PRUEBA ──────────────────────────────
+function seedEntregasPrueba() {
+  db.ref('entregas').once('value', snap => {
+    if (!snap.exists() || Object.keys(snap.val() || {}).length === 0) {
+      const entregas = {"e_prueba_1": {"id": "e_prueba_1", "codigo": "911", "cliente": "BLACK COLORS S.R.L.", "direccion": "Avda Cacique Lambare 3040", "telefono": "45-27-67", "zona": "DPTO.CENTRAL", "vendedor": "Maria Silvero", "chofer": "", "tipo": "reparto", "estado": "delivered", "horaAgregado": "08:00", "fechaEntrega": "09:30", "fechaCreacion": "2026-06-02T08:00:00.000Z", "obs": ""}, "e_prueba_2": {"id": "e_prueba_2", "codigo": "1973", "cliente": "ELECTROCAL SRL", "direccion": "entre segunda y tercera", "telefono": "", "zona": "GRAN ASUNCION", "vendedor": "Maria Silvero", "chofer": "", "tipo": "reparto", "estado": "pending", "horaAgregado": "08:05", "fechaEntrega": "", "fechaCreacion": "2026-06-02T08:05:00.000Z", "obs": ""}, "e_prueba_3": {"id": "e_prueba_3", "codigo": "7799", "cliente": "TECNOPRINT SA", "direccion": "ACAHAY 250 CASI RUTA TRANSCHACO", "telefono": "296202", "zona": "DPTO.CENTRAL", "vendedor": "Karely Urunaga", "chofer": "", "tipo": "reparto", "estado": "pending", "horaAgregado": "08:10", "fechaEntrega": "", "fechaCreacion": "2026-06-02T08:10:00.000Z", "obs": ""}, "e_prueba_4": {"id": "e_prueba_4", "codigo": "7791", "cliente": "PETERSEN INDUSTRIA & HOGAR SA", "direccion": "Avda. Artigas 1653 y Enrique Salas", "telefono": "", "zona": "GRAN ASUNCION", "vendedor": "Karely Urunaga", "chofer": "", "tipo": "reparto", "estado": "pending", "horaAgregado": "08:15", "fechaEntrega": "", "fechaCreacion": "2026-06-02T08:15:00.000Z", "obs": ""}, "e_prueba_5": {"id": "e_prueba_5", "codigo": "18974", "cliente": "FUNDACIÓN VIRGEN DE FATIMA", "direccion": "AV MCAL LOPEZ n°1941 C/ BRASIL", "telefono": "", "zona": "GRAN ASUNCION", "vendedor": "Karely Urunaga", "chofer": "", "tipo": "reparto", "estado": "pending", "horaAgregado": "08:20", "fechaEntrega": "", "fechaCreacion": "2026-06-02T08:20:00.000Z", "obs": ""}, "e_prueba_6": {"id": "e_prueba_6", "codigo": "9457", "cliente": "CONCREMAQ SRL", "direccion": "Walt Disney N°140", "telefono": "", "zona": "DPTO.CENTRAL", "vendedor": "Karely Urunaga", "chofer": "", "tipo": "reparto", "estado": "pending", "horaAgregado": "08:25", "fechaEntrega": "", "fechaCreacion": "2026-06-02T08:25:00.000Z", "obs": ""}, "e_prueba_7": {"id": "e_prueba_7", "codigo": "8818", "cliente": "PIROY S.A.", "direccion": "AVDA ARTIGAS 988 CASI CURUPAYTY", "telefono": "", "zona": "DPTO.CENTRAL", "vendedor": "Karely Urunaga", "chofer": "", "tipo": "reparto", "estado": "pending", "horaAgregado": "08:30", "fechaEntrega": "", "fechaCreacion": "2026-06-02T08:30:00.000Z", "obs": ""}, "e_prueba_8": {"id": "e_prueba_8", "codigo": "911", "cliente": "BLACK COLORS S.R.L.", "direccion": "Avda Cacique Lambare 3040", "telefono": "45-27-67", "zona": "DPTO.CENTRAL", "vendedor": "Maria Silvero", "chofer": "", "tipo": "reparto", "estado": "pending", "horaAgregado": "08:35", "fechaEntrega": "", "fechaCreacion": "2026-06-02T08:35:00.000Z", "obs": ""}};
+      db.ref('entregas').set(entregas)
+        .then(() => toast('✅ Entregas de prueba cargadas', 'success'));
+    }
+  });
+}
+
 // ─── SEED CLIENTES DESDE EXCEL ────────────────────────────
 // 1660 clientes pre-cargados — se insertan una sola vez si Firebase está vacío
 function seedClientesIniciales() {
@@ -2589,6 +2537,7 @@ function iniciarListenersFirebase() {
     renderRuta();
     renderRutaChofer();
     if (document.getElementById('page-planificar')?.classList.contains('active')) renderPlanificar();
+    if (document.getElementById('page-estadisticas')?.classList.contains('active')) renderEstadisticas();
     updateBadges();
     // Badge planificar
     const bp2 = document.getElementById('badge-planificar');
@@ -2812,7 +2761,7 @@ function navigate(page) {
   if (page === 'proveedores') renderProveedores();
   if (page === 'vendedores')  renderVendedores();
   if (page === 'choferes')    renderChoferes();
-  if (page === 'estadisticas') renderEstadisticas();
+  if (page === 'estadisticas') setTimeout(renderEstadisticas, 150);
   if (page === 'rutachofer')  { poblarSelectoresChofer(); renderRutaChofer(); }
 
   closeSidebar();
@@ -3409,8 +3358,10 @@ function generarRutaGoogle() {
 }
 
 function abrirMaps(direccion) {
-  const ciudad = APP.config.ciudad || 'Asunción';
-  window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion + ' ' + ciudad)}`, '_blank');
+  // Funciona en celular y PC
+  const ciudad = 'Asunción, Paraguay';
+  const query = encodeURIComponent(direccion + ', ' + ciudad);
+  window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
 }
 
 // ─── WHATSAPP RUTA ─────────────────────────────────────────
@@ -3923,6 +3874,7 @@ function renderRutaChofer() {
           ${badgeHTML(e.estado)}
           <button class="btn btn-ghost btn-xs" onclick="abrirModalEstado('${e.id}')">⚡</button>
           ${vend && vend.wa ? `<button class="btn btn-ghost btn-xs" style="color:var(--green)" title="Notificar al vendedor" onclick="notificarVendedorManual('${e.id}')">📱</button>` : ''}
+          <button class="btn btn-ghost btn-xs" style="color:var(--red)" title="Desasignar chofer" onclick="desasignarChofer('${e.id}')">🚫</button>
         </div>
       </div>`;
   });
@@ -4273,8 +4225,8 @@ function abrirRutaCompletaMaps() {
   const tmap = choferData ? (VEHICULO_TMAP[choferData.vehiculo] || 'driving') : 'driving';
 
   const ciudad = APP.config.ciudad || 'Asunción, Paraguay';
-  const dirs = mis.map(e => encodeURIComponent(e.direccion + ' ' + ciudad));
-  window.open(`https://www.google.com/maps/dir/?api=1&travelmode=${tmap}&waypoints=${dirs.join('|')}`, '_blank');
+  const url = generarURLMaps(mis, APP.config.direccionBase || DIR_BASE);
+  if (url) window.open(url.replace('travelmode=driving', `travelmode=${tmap}`), '_blank');
 }
 
 function abrirConfirmarEntregaChofer(id, clienteNombre) {
@@ -4621,6 +4573,37 @@ function cerrarSesion() {
   if (tabs) tabs.remove();
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+}
+
+
+// ─── ESTADÍSTICAS MENSUALES PERSISTENTES ─────────────────
+
+function guardarEstadisticaMensual() {
+  const ahora = new Date();
+  const key = `${ahora.getFullYear()}_${String(ahora.getMonth()+1).padStart(2,'0')}`;
+  const ent = APP.entregas;
+  const resumen = {
+    mes: key,
+    total:        ent.length,
+    entregadas:   ent.filter(e => e.estado === 'delivered' || e.estado === 'asistido' || e.estado === 'cobrado').length,
+    pendientes:   ent.filter(e => e.estado === 'pending').length,
+    reprogramadas:ent.filter(e => e.estado === 'rescheduled').length,
+    porZona:      {},
+    porVendedor:  {},
+    porChofer:    {},
+    guardadoEn:   ahora.toISOString()
+  };
+  ent.forEach(e => {
+    const z = e.zona || 'Sin zona';
+    resumen.porZona[z] = (resumen.porZona[z] || 0) + 1;
+    const v = e.vendedor || 'Sin asignar';
+    resumen.porVendedor[v] = (resumen.porVendedor[v] || 0) + 1;
+    const c = e.chofer || 'Sin asignar';
+    resumen.porChofer[c] = (resumen.porChofer[c] || 0) + 1;
+  });
+  db.ref('estadisticas_mensuales/' + key).set(resumen)
+    .then(() => toast('📊 Estadística mensual guardada', 'success'))
+    .catch(() => toast('Error al guardar estadística', 'error'));
 }
 
 // ─── ESTADÍSTICAS ─────────────────────────────────────────
@@ -5153,7 +5136,7 @@ function confirmarAsignarChofer() {
 
 let _mapaAbierto = false;
 
-function toggleMapa() {
+function toggleMapa() { /* mapa embebido desactivado - requiere API paga */ return;
   _mapaAbierto = !_mapaAbierto;
   const panel  = document.getElementById('ruta-panel-mapa');
   const btn    = document.getElementById('btn-toggle-mapa');
@@ -5600,6 +5583,29 @@ function renderResumenRutas() {
   }).join('');
 }
 
+
+// ─── HELPER GOOGLE MAPS URL (funciona en celular y PC) ───
+function generarURLMaps(paradas, base) {
+  const ciudad = ', Asunción, Paraguay';
+  const baseEnc = encodeURIComponent(base || APP.config.direccionBase || DIR_BASE);
+
+  if (paradas.length === 0) return null;
+
+  // Formato que funciona en celular Y computadora sin API key
+  if (paradas.length === 1) {
+    // Una sola parada — abrir directo
+    const dest = encodeURIComponent(paradas[0].direccion + ciudad);
+    return `https://www.google.com/maps/dir/?api=1&origin=${baseEnc}&destination=${dest}&travelmode=driving`;
+  }
+
+  // Múltiples paradas — origin, waypoints, destination
+  const origin      = baseEnc;
+  const destination = baseEnc; // regreso a base
+  const waypoints   = paradas.map(e => encodeURIComponent(e.direccion + ciudad)).join('|');
+
+  return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
+}
+
 // ─── RUTAS CON PUNTO DE SALIDA Y REGRESO ─────────────────
 
 function abrirRutaChoferMapsDesde(nombreChofer) {
@@ -5608,11 +5614,8 @@ function abrirRutaChoferMapsDesde(nombreChofer) {
   );
   if (activas.length === 0) { toast('No hay paradas para este chofer', 'error'); return; }
 
-  const base = encodeURIComponent(APP.config.direccionBase || DIR_BASE);
-  const dirs = activas.map(e => encodeURIComponent(e.direccion + ', Asunción, Paraguay'));
-
-  // Google Maps con origen, waypoints y destino (regreso a base)
-  const url = `https://www.google.com/maps/dir/${base}/${dirs.join('/')}/${base}`;
+  const url = generarURLMaps(activas, APP.config.direccionBase || DIR_BASE);
+  if (!url) { toast('No hay paradas', 'error'); return; }
   window.open(url, '_blank');
 }
 
@@ -5628,9 +5631,7 @@ function enviarRutaChoferDesde(nombreChofer) {
   const persona = ch || tc;
   const tel = persona?.wa?.replace(/\D/g,'') || '';
 
-  const base = encodeURIComponent(APP.config.direccionBase || DIR_BASE);
-  const dirs = activas.map(e => encodeURIComponent(e.direccion + ', Asunción, Paraguay'));
-  const mapsURL = `https://www.google.com/maps/dir/${base}/${dirs.join('/')}/${base}`;
+  const mapsURL = generarURLMaps(activas, APP.config.direccionBase || DIR_BASE) || '';
 
   const tiempoMin = calcularTiempoTotal(activas.length);
   const lista = activas.map((e,i) =>
@@ -5658,20 +5659,29 @@ function generarRutaChoferMaps() {
   if (choferFiltro) activas = activas.filter(e => e.chofer === choferFiltro || e.tecnico === choferFiltro);
   if (activas.length === 0) { toast('No hay entregas para esta ruta', 'error'); return; }
 
-  const base = encodeURIComponent(APP.config.direccionBase || DIR_BASE);
-  const dirs = activas.map(e => encodeURIComponent(e.direccion + ', Asunción, Paraguay'));
-  window.open(`https://www.google.com/maps/dir/${base}/${dirs.join('/')}/${base}`, '_blank');
+  const url = generarURLMaps(activas, APP.config.direccionBase || DIR_BASE);
+  if (!url) { toast('No hay paradas', 'error'); return; }
+  window.open(url, '_blank');
 }
 
 // Override generarRutaGoogle (ruta del día) también con base
 function generarRutaGoogle() {
   const activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
   if (activas.length === 0) { toast('No hay entregas pendientes', 'error'); return; }
-  const base = encodeURIComponent(APP.config.direccionBase || DIR_BASE);
-  const dirs = activas.map(e => encodeURIComponent(e.direccion + ', Asunción, Paraguay'));
-  window.open(`https://www.google.com/maps/dir/${base}/${dirs.join('/')}/${base}`, '_blank');
+  const url = generarURLMaps(activas, APP.config.direccionBase || DIR_BASE);
+  if (!url) { toast('No hay paradas', 'error'); return; }
+  window.open(url, '_blank');
 }
 
+
+
+// ─── DESASIGNAR CHOFER ────────────────────────────────────
+function desasignarChofer(id) {
+  if (!confirm('¿Desasignar el chofer de esta entrega?')) return;
+  fbActualizarEntrega(id, { chofer: '' })
+    .then(() => toast('Chofer desasignado', 'info'))
+    .catch(() => toast('Error al desasignar', 'error'));
+}
 
 // Cerrar modales al click fuera
 document.querySelectorAll('.modal-overlay').forEach(m => {
