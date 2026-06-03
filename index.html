@@ -12,6 +12,10 @@
 <!-- SheetJS para leer/exportar Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+<!-- Leaflet Maps (OpenStreetMap - 100% gratis) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <!-- Firebase SDK v10 (compat mode - works without bundler) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -1014,6 +1018,43 @@ html { -webkit-text-size-adjust: 100%; }
   #plan-layout { grid-template-columns: 1fr !important; }
 }
 
+
+/* ─── MAPA LEAFLET ───────────────────────────────────── */
+#mapa-entregas-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: none;
+}
+#mapa-entregas-container.visible { display: block; }
+#mapa-entregas-topbar {
+  background: var(--bg-card2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#mapa-entregas-topbar span { flex:1; font-size:13px; font-weight:600; }
+#mapa-leaflet { height: 420px; width: 100%; z-index: 1; }
+.mapa-leyenda {
+  padding: 10px 16px;
+  background: var(--bg-card2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.mapa-leyenda-item { display:flex; align-items:center; gap:6px; }
+.mapa-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.mapa-dot.base     { background:#1E6FFF; border:2px solid #fff; }
+.mapa-dot.pend     { background:#FFB800; }
+.mapa-dot.done     { background:#00D68F; }
+.mapa-dot.reprog   { background:#FF4560; }
+.mapa-dot.camino   { background:#A855F7; }
+
 </style>
 </head>
 <body>
@@ -1614,7 +1655,7 @@ html { -webkit-text-size-adjust: 100%; }
             <span style="font-size:18px">📍</span>
             <div>
               <div style="font-size:11px;color:var(--white-dim);margin-bottom:2px">PUNTO DE SALIDA Y REGRESO</div>
-              <div style="font-weight:700;font-size:14px" id="plan-dir-base">Cervantes 950 casi Venezuela, Asunción, Paraguay</div>
+              <div style="font-weight:700;font-size:14px" id="plan-dir-base">Neoprint / REAL INVEST S.A — Miguel de Cervantes Saavedra 950, Asunción</div>
             </div>
           </div>
         </div>
@@ -1695,7 +1736,8 @@ html { -webkit-text-size-adjust: 100%; }
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
               <button class="btn btn-secondary" id="btn-toggle-mapa" onclick="toggleMapa()">📍 Ver recorrido</button>
-              <button class="btn btn-secondary" onclick="generarRutaChoferMaps()">🗺️ Abrir en Maps</button>
+              <button class="btn btn-secondary" id="btn-ver-mapa" onclick="toggleMapaEntregas()">🗺️ Ver mapa de entregas</button>
+              <button class="btn btn-secondary" onclick="generarRutaChoferMaps()">📍 Abrir en Maps</button>
               <button class="btn btn-primary" onclick="enviarRutaChoferWA()">📱 Enviar por WhatsApp</button>
             </div>
           </div>
@@ -1705,6 +1747,22 @@ html { -webkit-text-size-adjust: 100%; }
         </div>
 
         <div id="rc-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
+
+        <!-- Mapa de estado de entregas -->
+        <div id="mapa-entregas-container" style="margin-bottom:16px">
+          <div id="mapa-entregas-topbar">
+            <span>🗺️ Mapa de estado de entregas</span>
+            <button class="btn btn-ghost btn-xs" onclick="cerrarMapaEntregas()">✕ Cerrar</button>
+          </div>
+          <div id="mapa-leaflet"></div>
+          <div class="mapa-leyenda">
+            <div class="mapa-leyenda-item"><div class="mapa-dot base"></div> Base Neoprint</div>
+            <div class="mapa-leyenda-item"><div class="mapa-dot pend"></div> Pendiente</div>
+            <div class="mapa-leyenda-item"><div class="mapa-dot camino"></div> En camino</div>
+            <div class="mapa-leyenda-item"><div class="mapa-dot done"></div> Entregado</div>
+            <div class="mapa-leyenda-item"><div class="mapa-dot reprog"></div> Reprogramado</div>
+          </div>
+        </div>
 
         <div class="card">
           <div id="rc-lista"></div>
@@ -2538,6 +2596,7 @@ function iniciarListenersFirebase() {
     renderRutaChofer();
     if (document.getElementById('page-planificar')?.classList.contains('active')) renderPlanificar();
     if (document.getElementById('page-estadisticas')?.classList.contains('active')) renderEstadisticas();
+    refrescarMapaSiVisible();
     updateBadges();
     // Badge planificar
     const bp2 = document.getElementById('badge-planificar');
@@ -5387,7 +5446,8 @@ function poblarSelectProveedor() {
 
 // ─── PLANIFICADOR DE RUTAS ────────────────────────────────
 
-const DIR_BASE = 'Cervantes 950 casi Venezuela, Asunción, Paraguay';
+const DIR_BASE = 'Miguel de Cervantes Saavedra 950, Asunción, Paraguay';
+const DIR_BASE_LABEL = 'Neoprint / REAL INVEST S.A — Cervantes 950, Asunción';
 let _planSeleccionadas = new Set();
 let _planChoferActivo = null;
 let _planZonaFiltro = '';
@@ -5682,6 +5742,183 @@ function desasignarChofer(id) {
     .then(() => toast('Chofer desasignado', 'info'))
     .catch(() => toast('Error al desasignar', 'error'));
 }
+
+
+// ─── MAPA LEAFLET OPENSTREETMAP ──────────────────────────
+
+let _mapaLeaflet = null;
+let _mapaVisible = false;
+let _marcadores  = {};
+
+// Coordenadas base Neoprint
+const BASE_LAT = -25.2867; // Asunción aprox
+const BASE_LNG = -57.6470;
+
+// Colores por estado
+const ESTADO_COLORES = {
+  pending:     '#FFB800',
+  transit:     '#A855F7',
+  delivered:   '#00D68F',
+  rescheduled: '#FF4560',
+  asistido:    '#00D68F',
+  cobrado:     '#00D68F',
+  retirado:    '#4D8FFF'
+};
+
+function toggleMapaEntregas() {
+  const container = document.getElementById('mapa-entregas-container');
+  const btn = document.getElementById('btn-ver-mapa');
+  if (!container) return;
+
+  _mapaVisible = !_mapaVisible;
+  if (_mapaVisible) {
+    container.classList.add('visible');
+    if (btn) { btn.style.background='var(--blue)'; btn.style.color='#fff'; btn.textContent='🗺️ Ocultar mapa'; }
+    setTimeout(() => {
+      iniciarMapaLeaflet();
+      actualizarMapaLeaflet();
+    }, 100);
+  } else {
+    container.classList.remove('visible');
+    if (btn) { btn.style.background=''; btn.style.color=''; btn.textContent='🗺️ Ver mapa de entregas'; }
+  }
+}
+
+function cerrarMapaEntregas() {
+  _mapaVisible = false;
+  const container = document.getElementById('mapa-entregas-container');
+  const btn = document.getElementById('btn-ver-mapa');
+  if (container) container.classList.remove('visible');
+  if (btn) { btn.style.background=''; btn.style.color=''; btn.textContent='🗺️ Ver mapa de entregas'; }
+}
+
+function iniciarMapaLeaflet() {
+  if (_mapaLeaflet) return; // ya iniciado
+
+  _mapaLeaflet = L.map('mapa-leaflet').setView([BASE_LAT, BASE_LNG], 12);
+
+  // OpenStreetMap tiles - 100% gratis
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(_mapaLeaflet);
+
+  // Marcador base Neoprint
+  const iconoBase = L.divIcon({
+    className: '',
+    html: `<div style="
+      background:#1E6FFF;
+      border:3px solid #fff;
+      border-radius:50%;
+      width:20px;height:20px;
+      box-shadow:0 2px 8px #00000060;
+      display:flex;align-items:center;justify-content:center;
+      font-size:10px;color:#fff;font-weight:800
+    ">N</div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  });
+
+  L.marker([BASE_LAT, BASE_LNG], { icon: iconoBase })
+    .addTo(_mapaLeaflet)
+    .bindPopup('<strong>Neoprint / REAL INVEST S.A</strong><br>Miguel de Cervantes Saavedra 950<br>Punto de salida y regreso');
+}
+
+async function actualizarMapaLeaflet() {
+  if (!_mapaLeaflet || !_mapaVisible) return;
+
+  const sel = document.getElementById('rc-selector');
+  const choferFiltro = sel ? sel.value : '';
+
+  let entregas = APP.entregas.filter(e => {
+    if (choferFiltro) return e.chofer === choferFiltro || e.tecnico === choferFiltro;
+    return true;
+  });
+
+  // Geocodificar direcciones y actualizar marcadores
+  // Quitar marcadores viejos que ya no están
+  Object.keys(_marcadores).forEach(id => {
+    if (!entregas.find(e => e.id === id)) {
+      _mapaLeaflet.removeLayer(_marcadores[id]);
+      delete _marcadores[id];
+    }
+  });
+
+  const bounds = [[BASE_LAT, BASE_LNG]];
+
+  for (const e of entregas) {
+    const color = ESTADO_COLORES[e.estado] || '#FFB800';
+    const num = entregas.indexOf(e) + 1;
+
+    const iconoHTML = `<div style="
+      background:${color};
+      border:2px solid #fff;
+      border-radius:50%;
+      width:26px;height:26px;
+      box-shadow:0 2px 8px #00000060;
+      display:flex;align-items:center;justify-content:center;
+      font-size:11px;font-weight:800;color:#fff;
+      ${e.estado === 'delivered' || e.estado === 'asistido' ? 'opacity:.8' : ''}
+    ">${e.estado === 'delivered' || e.estado === 'asistido' || e.estado === 'cobrado' ? '✓' : num}</div>`;
+
+    if (_marcadores[e.id]) {
+      // Actualizar color si cambió estado
+      _marcadores[e.id].setIcon(L.divIcon({
+        className: '', html: iconoHTML, iconSize:[26,26], iconAnchor:[13,13]
+      }));
+    } else {
+      // Geocodificar dirección
+      try {
+        const dir = encodeURIComponent(e.direccion + ', Asunción, Paraguay');
+        const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${dir}&format=json&limit=1`, {
+          headers: { 'Accept-Language': 'es' }
+        });
+        const data = await resp.json();
+
+        if (data && data[0]) {
+          const lat = parseFloat(data[0].lat);
+          const lng = parseFloat(data[0].lon);
+          bounds.push([lat, lng]);
+
+          const icono = L.divIcon({
+            className: '', html: iconoHTML, iconSize:[26,26], iconAnchor:[13,13]
+          });
+
+          const marker = L.marker([lat, lng], { icon: icono })
+            .addTo(_mapaLeaflet)
+            .bindPopup(`
+              <strong>${e.cliente}</strong><br>
+              ${e.direccion}<br>
+              <span style="color:${color};font-weight:700">${estadoLabel(e.estado)}</span>
+              ${e.vendedor ? '<br>👤 ' + e.vendedor : ''}
+            `);
+
+          _marcadores[e.id] = marker;
+
+          // Pequeña pausa para no saturar Nominatim (límite gratuito)
+          await new Promise(r => setTimeout(r, 300));
+        }
+      } catch(err) {
+        console.warn('Error geocodificando:', e.direccion, err);
+      }
+    }
+  }
+
+  // Ajustar vista para mostrar todos los puntos
+  if (bounds.length > 1) {
+    _mapaLeaflet.fitBounds(bounds, { padding: [30, 30] });
+  }
+
+  // Invalida tamaño por si el contenedor cambió
+  _mapaLeaflet.invalidateSize();
+}
+
+// Actualizar mapa cuando cambian entregas (Firebase listener)
+// Se llama desde el listener de entregas
+function refrescarMapaSiVisible() {
+  if (_mapaVisible) actualizarMapaLeaflet();
+}
+
 
 // Cerrar modales al click fuera
 document.querySelectorAll('.modal-overlay').forEach(m => {
