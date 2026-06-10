@@ -2476,15 +2476,16 @@ html { -webkit-text-size-adjust: 100%; }
         <input type="text" id="mp-contacto" placeholder="Nombre del contacto">
       </div>
       <div class="form-group full-span">
-        <label>📍 Link Google Maps (ubicación exacta)</label>
-        <input type="text" id="mp-maps-link" placeholder="Pegá el link de Google Maps del proveedor" oninput="extraerCoordsProveedor()">
-        <div id="mp-coords-preview" class="hidden" style="margin-top:6px;background:var(--green-bg);border:1px solid var(--green);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--green)">
-          ✅ Coordenadas: <span id="mp-coords-text"></span>
-        </div>
-      </div>
-      <div class="form-group full-span">
         <label>Observaciones</label>
         <input type="text" id="mp-obs" placeholder="Notas adicionales">
+      </div>
+    </div>
+    <!-- Link Maps visible antes de los botones -->
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:var(--white-dim);display:block;margin-bottom:6px">📍 Link Google Maps (ubicación exacta)</label>
+      <input type="text" id="mp-maps-link" placeholder="Pegá el link de Google Maps del proveedor" oninput="extraerCoordsProveedor()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13.5px;padding:9px 12px;outline:none;width:100%">
+      <div id="mp-coords-preview" class="hidden" style="margin-top:6px;background:var(--green-bg);border:1px solid var(--green);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--green)">
+        ✅ Coordenadas: <span id="mp-coords-text"></span>
       </div>
     </div>
     <div class="btn-row">
