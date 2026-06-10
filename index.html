@@ -3564,18 +3564,6 @@ function entregadoWhatsapp() {
 }
 
 // ─── RUTA GOOGLE MAPS ──────────────────────────────────────
-function generarRutaGoogle() {
-  const activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
-  if (activas.length === 0) {
-    toast('No hay entregas pendientes o en camino para la ruta', 'error');
-    return;
-  }
-  const ciudadBase = APP.config.ciudad || 'Asunción, Paraguay';
-  const dirs = activas.map(e => encodeURIComponent(e.direccion + ' ' + ciudadBase));
-  const url = `https://www.google.com/maps/dir/${dirs.join('/')}`;
-  window.open(url, '_blank');
-}
-
 function abrirMaps(direccion) {
   // Funciona en celular y PC
   const ciudad = 'Asunción, Paraguay';
@@ -4033,72 +4021,6 @@ function poblarSelectoresChofer() {
   if (val) sel.value = val;
 }
 
-function renderRutaChofer() {
-  const sel = document.getElementById('rc-selector');
-  const choferFiltro = sel ? sel.value : '';
-  const lista = document.getElementById('rc-lista');
-  const empty = document.getElementById('rc-empty');
-  const statsDiv = document.getElementById('rc-stats');
-  if (!lista) return;
-  lista.innerHTML = '';
-  if (statsDiv) statsDiv.innerHTML = '';
-
-  let activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
-  if (choferFiltro) activas = activas.filter(e => e.chofer === choferFiltro || e.tecnico === choferFiltro);
-
-  // Stats cards
-  if (statsDiv) {
-    const total = activas.length;
-    const pendCount = activas.filter(e => e.estado === 'pending').length;
-    const transitCount = activas.filter(e => e.estado === 'transit').length;
-    const tiempoMin = calcularTiempoTotal(total);
-    statsDiv.innerHTML = `
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 18px;min-width:120px">
-        <div style="font-size:11px;color:var(--white-dim);margin-bottom:4px">Total paradas</div>
-        <div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--blue-light)">${total}</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 18px;min-width:120px">
-        <div style="font-size:11px;color:var(--white-dim);margin-bottom:4px">Pendientes</div>
-        <div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--yellow)">${pendCount}</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 18px;min-width:120px">
-        <div style="font-size:11px;color:var(--white-dim);margin-bottom:4px">En camino</div>
-        <div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--blue-light)">${transitCount}</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 18px;min-width:140px">
-        <div style="font-size:11px;color:var(--white-dim);margin-bottom:4px">Tiempo estimado</div>
-        <div style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--green)">${formatearTiempo(tiempoMin)}</div>
-      </div>`;
-  }
-
-  if (activas.length === 0) {
-    empty.classList.remove('hidden');
-    return;
-  }
-  empty.classList.add('hidden');
-
-  activas.forEach((e, i) => {
-    const vend = APP.vendedores.find(v => v.nombre === e.vendedor);
-    lista.innerHTML += `
-      <div class="route-item">
-        <div class="route-num">${i+1}</div>
-        <div class="route-info">
-          <strong>${e.cliente}</strong>
-          <small>
-            ${e.direccion}${e.zona ? ' · ' + e.zona : ''}
-            ${e.vendedor ? ` · <span style="color:var(--blue-light)">${e.vendedor}</span>` : ''}
-          </small>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          ${badgeHTML(e.estado)}
-          <button class="btn btn-ghost btn-xs" onclick="abrirModalEstado('${e.id}')">⚡</button>
-          ${vend && vend.wa ? `<button class="btn btn-ghost btn-xs" style="color:var(--green)" title="Notificar al vendedor" onclick="notificarVendedorManual('${e.id}')">📱</button>` : ''}
-          <button class="btn btn-ghost btn-xs" style="color:var(--red)" title="Desasignar chofer" onclick="desasignarChofer('${e.id}')">🚫</button>
-        </div>
-      </div>`;
-  });
-}
-
 function notificarVendedorManual(entregaId) {
   const e = APP.entregas.find(x => x.id === entregaId);
   if (!e || !e.vendedor) return;
@@ -4115,18 +4037,6 @@ function notificarVendedorManual(entregaId) {
 
   const tel = v.wa.replace(/\D/g,'');
   window.open(`https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(msg)}`, '_blank');
-}
-
-function generarRutaChoferMaps() {
-  const sel = document.getElementById('rc-selector');
-  const choferFiltro = sel ? sel.value : '';
-  let activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
-  if (choferFiltro) activas = activas.filter(e => e.chofer === choferFiltro || e.tecnico === choferFiltro);
-  if (activas.length === 0) { toast('No hay entregas para esta ruta', 'error'); return; }
-
-  const ciudadBase = APP.config.ciudad || 'Asunción, Paraguay';
-  const dirs = activas.map(e => encodeURIComponent(e.direccion + ' ' + ciudadBase));
-  window.open(`https://www.google.com/maps/dir/${dirs.join('/')}`, '_blank');
 }
 
 function enviarRutaChoferWA() {
@@ -6817,33 +6727,7 @@ function guardarUbicacionChofer() {
 
 // ─── REEMPLAZAR extraerCoordenadas vieja con parsearCoordsDeLink ──
 
-function extraerCoordenadas() {
-  const input = document.getElementById('f-maps-link');
-  const preview = document.getElementById('f-coords-preview');
-  const coordsText = document.getElementById('f-coords-text');
-  if (!input || !preview) return;
-  const link = input.value.trim();
-  const coords = parsearCoordsDeLink(link);
-  if (coords) {
-    window._coordsActuales = coords;
-    if (coordsText) coordsText.textContent = `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
-    preview.style.background = 'var(--green-bg)';
-    preview.style.borderColor = 'var(--green)';
-    preview.style.color = 'var(--green)';
-    preview.classList.remove('hidden');
-  } else {
-    window._coordsActuales = null;
-    preview.classList.add('hidden');
-  }
-}
-
-
-// Cerrar modales al click fuera
-document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', function(e) {
-    if (e.target === this) this.classList.add('hidden');
-  });
-});
+);
 </script>
 </body>
 </html>
