@@ -5752,24 +5752,29 @@ function generarURLMaps(paradas, base) {
 
   if (paradas.length === 0) return null;
 
-  // Usar coordenadas exactas si están disponibles, sino usar dirección de texto
   function getDestino(e) {
     if (e.coords && e.coords.lat && e.coords.lng) {
-      return encodeURIComponent(`${e.coords.lat},${e.coords.lng}`);
+      return encodeURIComponent(e.coords.lat + ',' + e.coords.lng);
     }
     return encodeURIComponent(e.direccion + ciudad);
   }
 
+  function getTM() {
+    const nombre = paradas[0] && (paradas[0].chofer || paradas[0].tecnico) || '';
+    const c = (APP.choferes||[]).find(x => x.nombre === nombre);
+    return c && (c.vehiculo||'').toLowerCase() === 'moto' ? 'two_wheeler' : 'driving';
+  }
+
   if (paradas.length === 1) {
     const dest = getDestino(paradas[0]);
-    return `https://www.google.com/maps/dir/?api=1&origin=${baseEnc}&destination=${dest}&travelmode=' + (((APP.choferes||[]).find(x=>x.nombre===(paradas[0]?.chofer||paradas[0]?.tecnico||''))?.vehiculo||'').toLowerCase()==='moto'?'two_wheeler':'driving');
+    return 'https://www.google.com/maps/dir/?api=1&origin=' + baseEnc + '&destination=' + dest + '&travelmode=' + getTM();
   }
 
   const origin      = baseEnc;
   const destination = baseEnc;
   const waypoints   = paradas.map(e => getDestino(e)).join('|');
 
-  return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
+  return 'https://www.google.com/maps/dir/?api=1&origin=' + origin + '&destination=' + destination + '&waypoints=' + waypoints + '&travelmode=' + getTM();
 }
 
 // ─── RUTAS CON PUNTO DE SALIDA Y REGRESO ─────────────────
