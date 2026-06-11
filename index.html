@@ -6103,9 +6103,9 @@ function autoOrganizarRutas() {
   // Reemplazar botones del modal
   const btnRow = modal.querySelector('.btn-row');
   if (btnRow) {
-    btnRow.innerHTML = `
-      <button class="btn btn-primary" onclick="confirmarAutoOrganizar(${JSON.stringify(zonas)})">✅ Confirmar asignación</button>
-      <button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-estado')">Cancelar</button>`;
+    window._zonasAutoOrg = zonas;
+    btnRow.innerHTML = '<button class="btn btn-primary" onclick="confirmarAutoOrganizar()">✅ Confirmar asignación</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="cerrarModal(&#39;modal-estado&#39;)">Cancelar</button>';
   }
   // Ocultar grid de estados
   const grid = modal.querySelector('div[style*="grid-template-columns"]');
@@ -6114,7 +6114,8 @@ function autoOrganizarRutas() {
   modal.classList.remove('hidden');
 }
 
-function confirmarAutoOrganizar(zonas) {
+function confirmarAutoOrganizar() {
+  const zonas = window._zonasAutoOrg || [];
   const sinAsignar = APP.entregas.filter(e =>
     (!e.chofer || e.chofer === '') &&
     (e.estado === 'pending' || e.estado === 'transit')
@@ -6535,7 +6536,7 @@ function extraerCoordsCliente() {
   const coords = parsearCoordsDeLink(link);
   if (coords) {
     window._ecCoordsActuales = coords;
-    if (coordsText) coordsText.textContent = `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+    if (coordsText) coordsText.textContent = coords.lat.toFixed(5) + ', ' + coords.lng.toFixed(5);
     preview.style.background = 'var(--green-bg)';
     preview.style.borderColor = 'var(--green)';
     preview.style.color = 'var(--green)';
@@ -6622,7 +6623,7 @@ function extraerCoordsProveedor() {
   const coords = parsearCoordsDeLink(link);
   if (coords) {
     window._mpCoordsActuales = coords;
-    if (coordsText) coordsText.textContent = `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+    if (coordsText) coordsText.textContent = coords.lat.toFixed(5) + ', ' + coords.lng.toFixed(5);
     preview.classList.remove('hidden');
   } else {
     window._mpCoordsActuales = null;
@@ -6679,7 +6680,7 @@ function extraerCoordsUbicacion() {
   const coords = parsearCoordsDeLink(link);
   if (coords) {
     window._mucCoordsActuales = coords;
-    if (coordsText) coordsText.textContent = `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+    if (coordsText) coordsText.textContent = coords.lat.toFixed(5) + ', ' + coords.lng.toFixed(5);
     preview.classList.remove('hidden');
   } else {
     window._mucCoordsActuales = null;
@@ -6706,7 +6707,7 @@ function guardarUbicacionChofer() {
   }
   // Si no tenía dirección, usar las coords como referencia
   if (!e.direccion && coords) {
-    cambiosEntrega.direccion = `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+    cambiosEntrega.direccion = coords.lat.toFixed(5) + ', ' + coords.lng.toFixed(5);
   }
 
   fbActualizarEntrega(entregaId, cambiosEntrega).then(() => {
