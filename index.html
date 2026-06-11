@@ -2613,6 +2613,7 @@ function iniciarListenersFirebase() {
     renderEntregas();
     renderRuta();
     renderRutaChofer();
+    if (document.getElementById('page-planificar')?.classList.contains('active')) renderPlanificar();
     updateBadges();
     // Si estamos en vista chofer, actualizar también
     if (APP._choferViewActivo) renderChoferView(APP._choferViewActivo);
@@ -2800,6 +2801,7 @@ function navigate(page) {
 
   // Re-renderizar según la página
   if (page === 'dashboard')   renderDashboard();
+  if (page === 'planificar')   renderPlanificar();
   if (page === 'entregas')    renderEntregas();
   if (page === 'clientes')    renderClientes();
   if (page === 'ruta')        renderRuta();
@@ -4938,24 +4940,37 @@ function generarURLMaps(paradas, base) {
 
   if (paradas.length === 0) return null;
 
-  // Usar coordenadas exactas si están disponibles, sino usar dirección de texto
+  // Detectar modo de viaje según vehículo del chofer
+  function getTravelMode(nombre) {
+    const c = (APP.choferes||[]).find(x => x.nombre === nombre);
+    if (!c) return 'driving';
+    const v = (c.vehiculo || '').toLowerCase();
+    if (v === 'moto') return 'two_wheeler';
+    if (v === 'bicicleta') return 'bicycling';
+    return 'driving';
+  }
+
+  // Usar coordenadas exactas si están disponibles
   function getDestino(e) {
     if (e.coords && e.coords.lat && e.coords.lng) {
-      return encodeURIComponent(`${e.coords.lat},${e.coords.lng}`);
+      return encodeURIComponent(e.coords.lat + ',' + e.coords.lng);
     }
     return encodeURIComponent(e.direccion + ciudad);
   }
 
+  const choferNombre = paradas[0]?.chofer || paradas[0]?.tecnico || '';
+  const travelMode = getTravelMode(choferNombre);
+
   if (paradas.length === 1) {
     const dest = getDestino(paradas[0]);
-    return `https://www.google.com/maps/dir/?api=1&origin=${baseEnc}&destination=${dest}&travelmode=driving`;
+    return 'https://www.google.com/maps/dir/?api=1&origin=' + baseEnc + '&destination=' + dest + '&travelmode=' + travelMode;
   }
 
   const origin      = baseEnc;
   const destination = baseEnc;
   const waypoints   = paradas.map(e => getDestino(e)).join('|');
 
-  return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
+  return 'https://www.google.com/maps/dir/?api=1&origin=' + origin + '&destination=' + destination + '&waypoints=' + waypoints + '&travelmode=' + travelMode;
 }
 
 
