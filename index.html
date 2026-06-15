@@ -76,6 +76,71 @@ function marcarDespachada(id) {
 }
 
 
+
+// ─── BÚSQUEDA PROVEEDOR EN FORMULARIO RETIRO ─────────────
+
+function mostrarListaProveedores() {
+  const listaEl = document.getElementById('f-prov-lista');
+  if (!listaEl) return;
+  const provs = APP.proveedores || [];
+  if (provs.length === 0) { listaEl.classList.add('hidden'); return; }
+  listaEl.classList.remove('hidden');
+  listaEl.innerHTML = provs.map(function(p) {
+    return '<div onclick="seleccionarProveedorForm('' + p.codigo + '')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:8px;align-items:center">' +
+    '<span style="font-size:11px;background:var(--bg-card2);border-radius:4px;padding:2px 6px;color:var(--white-dim)">' + p.codigo + '</span>' +
+    '<strong>' + p.nombre + '</strong>' +
+    (p.direccion ? '<span style="font-size:11px;color:var(--white-dim)">· ' + p.direccion + '</span>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function buscarProveedorEnForm() {
+  const inp = document.getElementById('f-codigo');
+  const listaEl = document.getElementById('f-prov-lista');
+  if (!inp || !listaEl) return;
+  const q = inp.value.toLowerCase();
+  const provs = (APP.proveedores || []).filter(function(p) {
+    return p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q);
+  });
+  if (provs.length === 0) { listaEl.classList.add('hidden'); return; }
+  listaEl.classList.remove('hidden');
+  listaEl.innerHTML = provs.map(function(p) {
+    return '<div onclick="seleccionarProveedorForm('' + p.codigo + '')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:8px;align-items:center">' +
+    '<span style="font-size:11px;background:var(--bg-card2);border-radius:4px;padding:2px 6px;color:var(--white-dim)">' + p.codigo + '</span>' +
+    '<strong>' + p.nombre + '</strong>' +
+    (p.direccion ? '<span style="font-size:11px;color:var(--white-dim)">· ' + p.direccion + '</span>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function seleccionarProveedorForm(codigo) {
+  const p = (APP.proveedores || []).find(function(x) { return x.codigo === codigo; });
+  if (!p) return;
+  const codInp = document.getElementById('f-codigo');
+  if (codInp) codInp.value = p.codigo;
+  const clienteInp = document.getElementById('f-cliente');
+  if (clienteInp) clienteInp.value = p.nombre;
+  const dirInp = document.getElementById('f-direccion');
+  if (dirInp) {
+    if (p.coords && p.coords.lat) {
+      dirInp.value = p.coords.lat.toFixed(6) + ',' + p.coords.lng.toFixed(6);
+    } else {
+      dirInp.value = p.direccion || '';
+    }
+  }
+  const telInp = document.getElementById('f-telefono');
+  if (telInp) telInp.value = p.telefono || '';
+  if (p.mapsLink) {
+    const mlInp = document.getElementById('f-maps-link');
+    if (mlInp) { mlInp.value = p.mapsLink; extraerCoordenadas(); }
+  }
+  if (p.coords) window._coordsActuales = p.coords;
+  window._proveedorSeleccionado = p;
+  const listaEl = document.getElementById('f-prov-lista');
+  if (listaEl) listaEl.classList.add('hidden');
+}
+
+
 </script>
 
 <!-- Leaflet Maps (OpenStreetMap - 100% gratis) -->
@@ -1856,6 +1921,8 @@ html { -webkit-text-size-adjust: 100%; }
 
         </div>
 
+        <div id="ruta-chofer-resumen" style="display:none;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px"></div>
+        <div id="rc-chofer-info" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px"></div>
         <div id="rc-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
 
         <!-- Mapa de estado de entregas -->
@@ -3151,7 +3218,7 @@ function guardarEntrega() {
     tipo:      tipoVal,
     proveedor: document.getElementById('f-proveedor')?.value.trim() || '',
     obs:       document.getElementById('f-obs').value.trim(),
-    mapsLink:  document.getElementById('f-maps-link')?.value.trim() || '',
+    mapsLink:  window._mapsLinkCompleto || document.getElementById('f-maps-link')?.value.trim() || '',
     coords:    window._coordsActuales || null,
     estado:    document.getElementById('f-estado').value,
     horaAgregado: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
@@ -3215,7 +3282,10 @@ function limpiarFormulario() {
   const guardarProv = document.getElementById('guardar-proveedor');
   if (guardarProv) guardarProv.checked = false;
   window._coordsActuales = null;
+  window._mapsLinkCompleto = null;
+  window._proveedorSeleccionado = null;
   const cp = document.getElementById('f-coords-preview'); if(cp) cp.classList.add('hidden');
+  const pl = document.getElementById('f-prov-lista'); if(pl) pl.classList.add('hidden');
   const manInp = document.getElementById('f-vendedor-manual');
   if (manInp) manInp.remove();
   const waRow = document.getElementById('f-vendedor-wa-row');
@@ -3298,12 +3368,8 @@ function renderEntregas(filtro = '', estadoFiltro = '') {
     lista = lista.filter(e => e.vendedor === u.nombre);
   }
   if (rol === 'tecnico') {
-    // Técnico solo ve asistencias técnicas asignadas a él
-    if (APP._tabTecnico !== 'todas') {
-      lista = lista.filter(e => e.tecnico === u.nombre && e.tipo === 'asistencia');
-    } else {
-      lista = lista.filter(e => e.tipo === 'asistencia');
-    }
+    // Técnico solo ve SUS asistencias técnicas
+    lista = lista.filter(e => e.tecnico === u.nombre && e.tipo === 'asistencia');
   }
   if (rol === 'operaciones' || rol === 'compras_cobranzas') {
     lista = lista.filter(e => e.tipo === 'retiro' || e.tipo === 'cobranza');
@@ -3434,6 +3500,24 @@ function renderRuta() {
   // Tiempo estimado
   const tiempoMin = calcularTiempoTotal(activas.length);
   document.getElementById('ruta-tiempo-est').textContent = formatearTiempo(tiempoMin);
+
+  // Mostrar resumen del chofer seleccionado
+  const resumenChoferEl = document.getElementById('ruta-chofer-resumen');
+  if (resumenChoferEl) {
+    if (choferFiltroRuta && activas.length >= 0) {
+      const total    = APP.entregas.filter(e => (e.chofer === choferFiltroRuta || e.tecnico === choferFiltroRuta)).length;
+      const entregadas = APP.entregas.filter(e => (e.chofer === choferFiltroRuta || e.tecnico === choferFiltroRuta) && ['delivered','asistido','cobrado','retirado','despachada'].includes(e.estado)).length;
+      const pend     = activas.length;
+      resumenChoferEl.style.display = 'grid';
+      resumenChoferEl.innerHTML =
+        '<div style="background:var(--bg-input);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--yellow);font-family:var(--font-display)">' + pend + '</div><div style="font-size:11px;color:var(--white-dim)">Pendientes</div></div>' +
+        '<div style="background:var(--bg-input);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--green);font-family:var(--font-display)">' + entregadas + '</div><div style="font-size:11px;color:var(--white-dim)">Completadas</div></div>' +
+        '<div style="background:var(--bg-input);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--blue-light);font-family:var(--font-display)">' + total + '</div><div style="font-size:11px;color:var(--white-dim)">Total del día</div></div>' +
+        '<div style="background:var(--bg-input);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--blue-light);font-family:var(--font-display)">' + formatearTiempo(tiempoMin) + '</div><div style="font-size:11px;color:var(--white-dim)">Tiempo est.</div></div>';
+    } else {
+      resumenChoferEl.style.display = 'none';
+    }
+  }
 
   if (activas.length === 0) {
     empty.classList.remove('hidden');
@@ -4682,15 +4766,17 @@ function aplicarRol(rol) {
   if (rol === 'tecnico') {
     const u2 = APP._usuario || {};
     const esPlanificador = u2.id === 'tc_002'; // Cristian planifica rutas técnicas
+    // Técnicos NO ven: clientes, vendedores, choferes, proveedores, cobranzas, importar, config
     const ocultarTec = esPlanificador
-      ? ['clientes','vendedores','choferes','importar','config']
-      : ['planificar','clientes','vendedores','choferes','importar','config'];
+      ? ['clientes','vendedores','choferes','proveedores','cobranzas','importar','config','estadisticas']
+      : ['planificar','clientes','vendedores','choferes','proveedores','cobranzas','importar','config','estadisticas'];
     ocultarTec.forEach(page => {
       const el = document.querySelector(`.nav-item[data-page="${page}"]`);
       if (el) el.style.display = 'none';
     });
     agregarTabsTecnico();
     if (esPlanificador) navigate('planificar');
+    else navigate('entregas');
   }
 
   if (rol === 'operaciones' || rol === 'compras_cobranzas') {
@@ -5028,13 +5114,16 @@ function onTipoChange() {
     tecnicoRow?.classList.remove('hidden');
     poblarSelectTecnico();
   } else if (tipo === 'retiro') {
-    // Retiro: mostrar campo proveedor, chofer asigna
     provRow?.classList.remove('hidden');
     choferRow?.classList.remove('hidden');
-    // Cambiar label código a "Número de Proveedor"
-    if (labelCodigo) labelCodigo.textContent = 'Número de Proveedor';
+    if (labelCodigo) labelCodigo.textContent = 'Buscar Proveedor';
     const inp = document.getElementById('f-codigo');
-    if (inp) inp.placeholder = 'Ej: PROV-001';
+    if (inp) {
+      inp.placeholder = 'Código o nombre del proveedor...';
+      inp.oninput = buscarProveedorEnForm;
+    }
+    // Mostrar lista de proveedores disponibles
+    mostrarListaProveedores();
   } else if (tipo === 'cobranza') {
     choferRow?.classList.remove('hidden');
     if (labelCodigo) labelCodigo.textContent = 'Código cliente';
@@ -5555,14 +5644,17 @@ function guardarProveedor() {
   const nombre = document.getElementById('mp-nombre').value.trim();
   if (!codigo || !nombre) { toast('Código y nombre son obligatorios', 'error'); return; }
 
+  const mapsLinkVal = document.getElementById('mp-maps-link')?.value.trim() || '';
+  const dirVal = document.getElementById('mp-direccion').value.trim();
+  // No usar link de Maps como dirección — guardar en campo separado
   const prov = {
     codigo,
     nombre,
-    direccion: document.getElementById('mp-direccion').value.trim(),
+    direccion: dirVal && !dirVal.startsWith('http') ? dirVal : '',
     telefono:  document.getElementById('mp-telefono').value.trim(),
     contacto:  document.getElementById('mp-contacto').value.trim(),
     obs:       document.getElementById('mp-obs').value.trim(),
-    mapsLink:  document.getElementById('mp-maps-link')?.value.trim() || '',
+    mapsLink:  mapsLinkVal,
     coords:    window._mpCoordsActuales || null
   };
 
@@ -6357,8 +6449,16 @@ function extraerCoordenadas() {
 
   if (lat && lng) {
     window._coordsActuales = { lat, lng };
-    if (coordsText) coordsText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    window._mapsLinkCompleto = link;
+    const coordStr = lat.toFixed(6) + ',' + lng.toFixed(6);
+    if (coordsText) coordsText.textContent = coordStr;
+    preview.style.background = 'var(--green-bg)';
+    preview.style.borderColor = 'var(--green)';
+    preview.style.color = 'var(--green)';
     preview.classList.remove('hidden');
+    // Usar coordenadas como dirección para rutas exactas
+    const dirInput = document.getElementById('f-direccion');
+    if (dirInput && !dirInput.value) dirInput.value = coordStr;
   } else {
     window._coordsActuales = null;
     preview.classList.add('hidden');
@@ -6505,16 +6605,28 @@ async function optimizarRutas() {
 
   // Obtener coordenadas de cada entrega
   const puntos = [];
+  let sinCoords = 0;
   for (const e of sinAsignar) {
     let coords = e.coords;
+    if (!coords && e.direccion) {
+      // Intentar parsear si la dirección es un par de coordenadas
+      const coordMatch = e.direccion.match(/^(-?\d+\.\d+),(-?\d+\.\d+)$/);
+      if (coordMatch) {
+        coords = { lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]) };
+      }
+    }
     if (!coords) {
-      if (info) info.innerHTML = `<div style="text-align:center;padding:20px"><div style="font-size:28px;margin-bottom:8px">🔍</div><div style="color:var(--white-dim);font-size:12px">Localizando: ${e.cliente}...</div></div>`;
+      sinCoords++;
+      if (info) info.innerHTML = '<div style="text-align:center;padding:20px"><div style="font-size:28px;margin-bottom:8px">🔍</div><div style="color:var(--white-dim);font-size:12px">Localizando: ' + e.cliente + '...</div></div>';
       coords = await geocodificar(e.direccion);
-      await new Promise(r => setTimeout(r, 400)); // respetar límite Nominatim
+      if (coords) await new Promise(r => setTimeout(r, 350));
     }
     if (coords) {
       puntos.push({ ...e, lat: coords.lat, lng: coords.lng });
     }
+  }
+  if (sinCoords > 0 && info) {
+    console.log('Geocodificadas ' + sinCoords + ' direcciones sin coordenadas guardadas');
   }
 
   if (puntos.length === 0) {
