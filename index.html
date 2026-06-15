@@ -17,17 +17,23 @@
 function mostrarProveedoresRapido() {
   const listaEl = document.getElementById('quick-prov-lista');
   if (!listaEl) return;
-  const provs = APP.proveedores || [];
   listaEl.style.display = 'block';
-  if (provs.length === 0) {
-    listaEl.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--white-dim)">No hay proveedores. Agregá uno en la sección Proveedores.</div>';
-    return;
-  }
+  listaEl.innerHTML = '<div style="padding:10px 14px;font-size:12px;color:var(--white-dim)">⏳ Cargando...</div>';
+  // Siempre leer directo desde Firebase para tener datos frescos
+  db.ref('proveedores').once('value', function(snap) {
+    const data = snap.val() || {};
+    const provs = Object.values(data);
+    APP.proveedores = provs; // actualizar APP también
+    if (provs.length === 0) {
+      listaEl.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--white-dim)">No hay proveedores cargados. Podés agregar uno en la sección Proveedores.</div>';
+      return;
+    }
   listaEl.innerHTML = provs.map(function(p) {
     return '<div onclick="elegirProveedorRapido('' + p.codigo + '')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background='var(--bg-card2)'" onmouseout="this.style.background=''">' +
     '<div style="font-weight:600">' + p.nombre + '</div>' +
     '<div style="font-size:11px;color:var(--white-dim)">' + p.codigo + (p.direccion ? ' · ' + p.direccion : '') + '</div></div>';
   }).join('');
+  }); // end db.ref once
 }
 
 function buscarProveedorRapidoForm() {
@@ -35,10 +41,13 @@ function buscarProveedorRapidoForm() {
   const listaEl = document.getElementById('quick-prov-lista');
   if (!inp || !listaEl) return;
   const q = inp.value.toLowerCase().trim();
-  if (!q) { listaEl.style.display = 'none'; return; }
-  const provs = (APP.proveedores || []).filter(function(p) {
+  if (!q) { mostrarProveedoresRapido(); return; }
+  // Use APP.proveedores if loaded, else fetch
+  const source = (APP.proveedores && APP.proveedores.length > 0) ? APP.proveedores : [];
+  const provs = source.filter(function(p) {
     return p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q);
   });
+  if (source.length === 0) { mostrarProveedoresRapido(); return; }
   listaEl.style.display = 'block';
   if (provs.length === 0) {
     listaEl.innerHTML = '<div style="padding:10px 14px;font-size:13px;color:var(--white-dim)">Sin resultados</div>';
