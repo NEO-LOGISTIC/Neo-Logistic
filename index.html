@@ -18,22 +18,35 @@ function mostrarProveedoresRapido() {
   const listaEl = document.getElementById('quick-prov-lista');
   if (!listaEl) return;
   listaEl.style.display = 'block';
-  listaEl.innerHTML = '<div style="padding:10px 14px;font-size:12px;color:var(--white-dim)">⏳ Cargando...</div>';
-  // Siempre leer directo desde Firebase para tener datos frescos
-  db.ref('proveedores').once('value', function(snap) {
-    const data = snap.val() || {};
-    const provs = Object.values(data);
-    APP.proveedores = provs; // actualizar APP también
-    if (provs.length === 0) {
-      listaEl.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--white-dim)">No hay proveedores cargados. Podés agregar uno en la sección Proveedores.</div>';
+
+  function renderLista(provs) {
+    if (!provs || provs.length === 0) {
+      listaEl.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--white-dim)">No hay proveedores. Agregá uno en Proveedores.</div>';
       return;
     }
-  listaEl.innerHTML = provs.map(function(p) {
-    return '<div onclick="elegirProveedorRapido('' + p.codigo + '')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background='var(--bg-card2)'" onmouseout="this.style.background=''">' +
-    '<div style="font-weight:600">' + p.nombre + '</div>' +
-    '<div style="font-size:11px;color:var(--white-dim)">' + p.codigo + (p.direccion ? ' · ' + p.direccion : '') + '</div></div>';
-  }).join('');
-  }); // end db.ref once
+    listaEl.innerHTML = provs.map(function(p) {
+      const cod = p.codigo || p.id || '—';
+      const nom = p.nombre || '(sin nombre)';
+      const dir = p.obs || p.direccion || '';
+      return '<div onclick="elegirProveedorRapido('' + cod + '')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background='var(--bg-card2)'" onmouseout="this.style.background=''">' +
+      '<div style="font-weight:600">' + nom + '</div>' +
+      '<div style="font-size:11px;color:var(--white-dim)">' + cod + (dir ? ' · ' + dir.substring(0,40) : '') + '</div></div>';
+    }).join('');
+  }
+
+  // Usar APP.proveedores si está cargado
+  if (APP.proveedores && APP.proveedores.length > 0) {
+    renderLista(APP.proveedores);
+  } else {
+    // Cargar directo desde Firebase
+    listaEl.innerHTML = '<div style="padding:10px 14px;font-size:12px;color:var(--white-dim)">⏳ Cargando...</div>';
+    db.ref('proveedores').once('value', function(snap) {
+      const data = snap.val() || {};
+      const provs = Object.values(data);
+      APP.proveedores = provs;
+      renderLista(provs);
+    });
+  }
 }
 
 function buscarProveedorRapidoForm() {
@@ -43,25 +56,29 @@ function buscarProveedorRapidoForm() {
   const q = inp.value.toLowerCase().trim();
   if (!q) { mostrarProveedoresRapido(); return; }
   // Use APP.proveedores if loaded, else fetch
-  const source = (APP.proveedores && APP.proveedores.length > 0) ? APP.proveedores : [];
-  const provs = source.filter(function(p) {
-    return p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q);
-  });
+  const source = APP.proveedores || [];
   if (source.length === 0) { mostrarProveedoresRapido(); return; }
+  const provs = source.filter(function(p) {
+    const nom = (p.nombre||'').toLowerCase();
+    const cod = String(p.codigo||p.id||'').toLowerCase();
+    return nom.includes(q) || cod.includes(q);
+  });
   listaEl.style.display = 'block';
   if (provs.length === 0) {
     listaEl.innerHTML = '<div style="padding:10px 14px;font-size:13px;color:var(--white-dim)">Sin resultados</div>';
     return;
   }
   listaEl.innerHTML = provs.map(function(p) {
-    return '<div onclick="elegirProveedorRapido('' + p.codigo + '')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background='var(--bg-card2)'" onmouseout="this.style.background=''">' +
-    '<div style="font-weight:600">' + p.nombre + '</div>' +
-    '<div style="font-size:11px;color:var(--white-dim)">' + p.codigo + (p.direccion ? ' · ' + p.direccion : '') + '</div></div>';
+    const cod = p.codigo || p.id || '—';
+    const nom = p.nombre || '(sin nombre)';
+    return '<div onclick="elegirProveedorRapido('' + cod + '')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background='var(--bg-card2)'" onmouseout="this.style.background=''">' +
+    '<div style="font-weight:600">' + nom + '</div>' +
+    '<div style="font-size:11px;color:var(--white-dim)">' + cod + (p.obs ? ' · ' + p.obs.substring(0,40) : (p.direccion ? ' · ' + p.direccion.substring(0,40) : '')) + '</div></div>';
   }).join('');
 }
 
 function elegirProveedorRapido(codigo) {
-  const p = (APP.proveedores || []).find(function(x) { return x.codigo === codigo; });
+  const p = (APP.proveedores || []).find(function(x) { return x.codigo === codigo || x.id === codigo || String(x.codigo) === String(codigo); });
   if (!p) return;
   const listaEl = document.getElementById('quick-prov-lista');
   if (listaEl) listaEl.style.display = 'none';
@@ -5537,6 +5554,15 @@ function abrirModalNuevoProveedor() {
   ['mp-codigo','mp-nombre','mp-direccion','mp-telefono','mp-contacto','mp-obs'].forEach(id => {
     document.getElementById(id).value = '';
   });
+  // Auto-generar código PROV-XXX
+  const provs = APP.proveedores || [];
+  let maxNum = 0;
+  provs.forEach(function(p) {
+    const m = String(p.codigo||'').match(/PROV-(\d+)/i);
+    if (m) maxNum = Math.max(maxNum, parseInt(m[1]));
+  });
+  const nextCod = 'PROV-' + String(maxNum + 1).padStart(3, '0');
+  document.getElementById('mp-codigo').value = nextCod;
   document.getElementById('modal-proveedor').classList.remove('hidden');
 }
 
