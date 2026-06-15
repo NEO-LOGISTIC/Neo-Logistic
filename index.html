@@ -79,6 +79,94 @@ function marcarDespachada(id) {
 
 // ─── BÚSQUEDA PROVEEDOR EN FORMULARIO RETIRO ─────────────
 
+
+// ─── CAMPO CÓDIGO — router según tipo ────────────────────
+function onCodigoInput() {
+  const tipo = document.getElementById('f-tipo')?.value;
+  if (tipo === 'retiro') {
+    buscarProveedorEnForm();
+  } else {
+    // Comportamiento normal de búsqueda de cliente
+    buscarClienteRapido && buscarClienteRapido();
+  }
+}
+
+
+// ─── BÚSQUEDA RÁPIDA PROVEEDOR ───────────────────────────
+
+function mostrarProveedoresRapido() {
+  const listaEl = document.getElementById('quick-prov-lista');
+  if (!listaEl) return;
+  const provs = APP.proveedores || [];
+  if (provs.length === 0) {
+    listaEl.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--white-dim)">No hay proveedores cargados. Podés cargarlo manualmente abajo.</div>';
+    listaEl.classList.remove('hidden');
+    return;
+  }
+  listaEl.classList.remove('hidden');
+  listaEl.innerHTML = provs.map(function(p) {
+    return '<div onclick="elegirProveedorRapido('' + p.codigo + '')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:10px;align-items:center;transition:background .15s" onmouseover="this.style.background='var(--bg-card2)'" onmouseout="this.style.background=''">' +
+    '<div><div style="font-weight:600">' + p.nombre + '</div>' +
+    '<div style="font-size:11px;color:var(--white-dim)">' + p.codigo + (p.direccion ? ' · ' + p.direccion : '') + '</div></div>' +
+    '</div>';
+  }).join('');
+}
+
+function buscarProveedorRapidoForm() {
+  const inp = document.getElementById('quick-prov');
+  const listaEl = document.getElementById('quick-prov-lista');
+  if (!inp || !listaEl) return;
+  const q = inp.value.toLowerCase().trim();
+  if (!q) { mostrarProveedoresRapido(); return; }
+  const provs = (APP.proveedores || []).filter(function(p) {
+    return p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q);
+  });
+  if (provs.length === 0) {
+    listaEl.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--white-dim)">No encontrado. Completá los datos manualmente abajo.</div>';
+    listaEl.classList.remove('hidden');
+    return;
+  }
+  listaEl.classList.remove('hidden');
+  listaEl.innerHTML = provs.map(function(p) {
+    return '<div onclick="elegirProveedorRapido('' + p.codigo + '')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--bg-card2)'" onmouseout="this.style.background=''">' +
+    '<div><div style="font-weight:600">' + p.nombre + '</div>' +
+    '<div style="font-size:11px;color:var(--white-dim)">' + p.codigo + (p.direccion ? ' · ' + p.direccion : '') + '</div></div>' +
+    '</div>';
+  }).join('');
+}
+
+function elegirProveedorRapido(codigo) {
+  const p = (APP.proveedores || []).find(function(x) { return x.codigo === codigo; });
+  if (!p) return;
+  // Rellenar formulario con datos del proveedor
+  const clienteInp = document.getElementById('f-cliente');
+  if (clienteInp) clienteInp.value = p.nombre;
+  const dirInp = document.getElementById('f-direccion');
+  if (dirInp) {
+    if (p.coords && p.coords.lat) {
+      dirInp.value = p.coords.lat.toFixed(6) + ',' + p.coords.lng.toFixed(6);
+    } else {
+      dirInp.value = p.direccion || '';
+    }
+  }
+  const telInp = document.getElementById('f-telefono');
+  if (telInp) telInp.value = p.telefono || '';
+  const codInp = document.getElementById('f-codigo');
+  if (codInp) codInp.value = p.codigo;
+  if (p.mapsLink) {
+    const mlInp = document.getElementById('f-maps-link');
+    if (mlInp) { mlInp.value = p.mapsLink; extraerCoordenadas(); }
+  }
+  if (p.coords) window._coordsActuales = p.coords;
+  window._proveedorSeleccionado = p;
+  // Cerrar lista y mostrar seleccionado
+  const listaEl = document.getElementById('quick-prov-lista');
+  if (listaEl) listaEl.classList.add('hidden');
+  const qp = document.getElementById('quick-prov');
+  if (qp) qp.value = p.nombre;
+  toast('✅ Proveedor seleccionado: ' + p.nombre, 'success');
+}
+
 function mostrarListaProveedores() {
   const listaEl = document.getElementById('f-prov-lista');
   if (!listaEl) return;
@@ -1552,12 +1640,25 @@ html { -webkit-text-size-adjust: 100%; }
           <div style="font-family:var(--font-display);font-weight:700;font-size:15px;margin-bottom:14px">
             ⚡ Carga Rápida por Código de Cliente
           </div>
-          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <!-- Búsqueda rápida clientes (se oculta en retiro) -->
+          <div id="carga-rapida-cliente" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
             <div class="form-group" style="flex:1;min-width:180px">
               <label>Código de cliente</label>
               <input type="text" id="quick-code" placeholder="Ej: CLI001" oninput="buscarClienteRapido()" autocomplete="off">
             </div>
             <button class="btn btn-secondary btn-sm" onclick="buscarClienteRapido()">
+              🔍 Buscar
+            </button>
+          </div>
+
+          <!-- Búsqueda rápida proveedores (solo en retiro) -->
+          <div id="carga-rapida-proveedor" class="hidden" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+            <div class="form-group" style="flex:1;min-width:180px;position:relative">
+              <label>Buscar Proveedor</label>
+              <input type="text" id="quick-prov" placeholder="Nombre o código del proveedor..." oninput="buscarProveedorRapidoForm()" autocomplete="off">
+              <div id="quick-prov-lista" class="hidden" style="position:absolute;z-index:200;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:200px;overflow-y:auto;width:100%;box-shadow:0 8px 24px #00000060;top:100%;left:0"></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="buscarProveedorRapidoForm()">
               🔍 Buscar
             </button>
           </div>
@@ -1583,7 +1684,7 @@ html { -webkit-text-size-adjust: 100%; }
           <div class="form-grid">
             <div class="form-group" style="position:relative">
               <label id="f-codigo-label">Código cliente</label>
-              <input type="text" id="f-codigo" placeholder="CLI001">
+              <input type="text" id="f-codigo" placeholder="CLI001" oninput="onCodigoInput()">
               <div id="f-prov-lista" class="hidden" style="position:absolute;z-index:100;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:180px;overflow-y:auto;width:100%;box-shadow:0 8px 24px #00000040;margin-top:2px"></div>
             </div>
             <div class="form-group">
@@ -5109,34 +5210,30 @@ function onTipoChange() {
   const codigoGroup = document.getElementById('f-codigo')?.closest('.form-group');
   const labelCodigo = codigoGroup?.querySelector('label');
 
-  // Reset all
+  // Reset all rows
   [choferRow, tecnicoRow].forEach(el => el?.classList.add('hidden'));
-  // Reset proveedor list
-  const pl0 = document.getElementById('f-prov-lista');
-  if (pl0) { pl0.classList.add('hidden'); pl0.innerHTML = ''; }
-  // Reset label
-  const lbl0 = document.getElementById('f-codigo-label');
-  if (lbl0) lbl0.textContent = 'Código cliente';
-  const finp = document.getElementById('f-codigo');
-  if (finp) { finp.placeholder = 'CLI001'; finp.oninput = buscarClienteRapido; }
+  // Reset búsqueda rápida
+  const crCliente = document.getElementById('carga-rapida-cliente');
+  const crProv    = document.getElementById('carga-rapida-proveedor');
+  if (crCliente) crCliente.style.display = 'flex';
+  if (crProv)    { crProv.style.display = 'none'; crProv.classList.add('hidden'); }
+  const qpl = document.getElementById('quick-prov-lista');
+  if (qpl) { qpl.classList.add('hidden'); qpl.innerHTML = ''; }
 
   if (tipo === 'asistencia') {
     tecnicoRow?.classList.remove('hidden');
     poblarSelectTecnico();
   } else if (tipo === 'retiro') {
     choferRow?.classList.remove('hidden');
-    // Actualizar label y placeholder del campo código
-    if (labelCodigo) labelCodigo.textContent = 'Buscar Proveedor';
-    const labelCod2 = document.getElementById('f-codigo-label');
-    if (labelCod2) labelCod2.textContent = 'Buscar Proveedor';
-    const inp = document.getElementById('f-codigo');
-    if (inp) {
-      inp.placeholder = 'Escribí el nombre o código del proveedor...';
-      inp.value = '';
-      inp.oninput = buscarProveedorEnForm;
-    }
-    // Mostrar lista de proveedores
-    mostrarListaProveedores();
+    // Mostrar búsqueda rápida de proveedores, ocultar la de clientes
+    const crCliente = document.getElementById('carga-rapida-cliente');
+    const crProv    = document.getElementById('carga-rapida-proveedor');
+    if (crCliente) crCliente.style.display = 'none';
+    if (crProv)    { crProv.style.display = 'flex'; crProv.classList.remove('hidden'); }
+    // Limpiar campo proveedor
+    const qp = document.getElementById('quick-prov');
+    if (qp) { qp.value = ''; qp.focus(); }
+    mostrarProveedoresRapido();
   } else if (tipo === 'cobranza') {
     choferRow?.classList.remove('hidden');
     if (labelCodigo) labelCodigo.textContent = 'Código cliente';
