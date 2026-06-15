@@ -11,7 +11,72 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231E6FFF'/><text y='75' x='50' text-anchor='middle' font-size='65' fill='white' font-family='Arial' font-weight='bold'>N</text></svg>">
 
 <!-- SheetJS para leer/exportar Excel -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+// ─── CAMBIO DE PRODUCTO (técnico → chofer) ───────────────
+
+function cambioProductoTecnico() {
+  if (!APP._entregaSeleccionada) return;
+  const e = APP.entregas.find(x => x.id === APP._entregaSeleccionada);
+  if (!e) return;
+  if (!confirm('¿Marcar como Cambio de Producto? Pasará al planificador para asignar chofer.')) return;
+  const hora = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  const cambios = {
+    estado: 'cambio_producto',
+    tipo: 'entrega',
+    tecnico: e.tecnico || '',
+    chofer: '',
+    fechaEntrega: hora,
+    obs: (e.obs ? e.obs + ' | ' : '') + 'Cambio de producto solicitado por ' + (APP._usuario && APP._usuario.nombre || '') + ' a las ' + hora
+  };
+  fbActualizarEntrega(e.id, cambios)
+    .then(() => {
+      toast('🔄 Pasado a planificador como Cambio de Producto', 'success');
+      cerrarModal('modal-estado');
+      if (e.vendedor) {
+        const vend = APP.vendedores.find(v => v.nombre === e.vendedor);
+        if (vend && vend.wa && vend.notif !== false) {
+          const msg = '🔄 *CAMBIO DE PRODUCTO — ' + (APP.config.empresa || 'Neo Logistic') + '*\n\n' +
+            'Hola ' + vend.nombre + ', el técnico solicitó cambio:\n\n' +
+            '📋 *Cliente:* ' + e.cliente + '\n' +
+            '📍 *Dirección:* ' + e.direccion + '\n' +
+            '🛠️ *Técnico:* ' + (e.tecnico || '—') + '\n' +
+            '🕐 *Hora:* ' + hora + '\n' +
+            '🔄 *Estado:* Cambio de Producto\n\n_Neo Logistic_';
+          window.open('https://api.whatsapp.com/send?phone=' + vend.wa.replace(/\D/g,'') + '&text=' + encodeURIComponent(msg), '_blank');
+        }
+      }
+    })
+    .catch(() => toast('Error al actualizar', 'error'));
+}
+
+// ─── DESPACHADA para encomiendas ─────────────────────────
+
+function marcarDespachada(id) {
+  const e = APP.entregas.find(x => x.id === id);
+  if (!e) return;
+  const hora = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  fbActualizarEntrega(id, { estado: 'despachada', fechaEntrega: hora })
+    .then(() => {
+      toast('📬 Encomienda despachada', 'success');
+      if (e.vendedor) {
+        const vend = APP.vendedores.find(v => v.nombre === e.vendedor);
+        if (vend && vend.wa) {
+          const transportadora = e.obs || 'Transportadora';
+          const msg = '📬 *ENCOMIENDA DESPACHADA — ' + (APP.config.empresa || 'Neo Logistic') + '*\n\n' +
+            'Hola ' + vend.nombre + ':\n\n' +
+            '📋 *Cliente:* ' + e.cliente + '\n' +
+            '📍 *Dirección:* ' + e.direccion + '\n' +
+            '🚚 *Transportadora:* ' + transportadora + '\n' +
+            '🕐 *Hora:* ' + hora + '\n' +
+            '📬 *Estado:* Despachada\n\n_Neo Logistic_';
+          window.open('https://api.whatsapp.com/send?phone=' + vend.wa.replace(/\D/g,'') + '&text=' + encodeURIComponent(msg), '_blank');
+        }
+      }
+    });
+}
+
+
+</script>
 
 <!-- Leaflet Maps (OpenStreetMap - 100% gratis) -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -419,6 +484,8 @@ tbody tr:hover td { background: var(--bg-card2); }
 .badge.asistido   { background: #7C3AED18; color: #A855F7; border: 1px solid #A855F740; }
 .badge.retirado   { background: var(--blue-st-bg); color: var(--blue-light); border: 1px solid var(--blue)40; }
 .badge.cobrado    { background: #00D68F18; color: #00A870; border: 1px solid #00D68F40; }
+.badge.cambio_producto { background: #FF8C0018; color: #CC5500; border: 1px solid #FF8C0040; }
+.badge.despachada { background: #7C3AED18; color: #A855F7; border: 1px solid #7C3AED40; }
 .badge.dot::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 /* ─── FORMULARIOS ─────────────────────────────────── */
@@ -1498,6 +1565,7 @@ html { -webkit-text-size-adjust: 100%; }
                 <option value="asistencia">🛠️ Asistencia Técnica</option>
                 <option value="retiro">🔄 Retiro de Mercadería</option>
                 <option value="cobranza">💰 Cobranza</option>
+                <option value="encomienda">📬 Encomienda (Transportadora)</option>
               </select>
             </div>
             <div class="form-group">
@@ -2266,6 +2334,7 @@ html { -webkit-text-size-adjust: 100%; }
       <button class="btn btn-green" onclick="cambiarEstado('delivered')">✅ Entregado</button>
       <button class="btn btn-red" onclick="cambiarEstado('rescheduled')">🔄 Reprogramado</button>
       <button class="btn" style="background:#7C3AED;color:#fff" onclick="cambiarEstado('asistido')" id="btn-asistido">🛠️ Asistido</button>
+      <button class="btn" style="background:#FF8C00;color:#fff" onclick="cambioProductoTecnico()" id="btn-cambio-prod">🔄 Cambio de Producto</button>
       <button class="btn" style="background:var(--blue-dark);color:#fff" onclick="cambiarEstado('retirado')" id="btn-retirado">📦 Retirado</button>
       <button class="btn" style="background:#00A870;color:#fff" onclick="cobradoSinAviso()" id="btn-cobrado">💰 Cobrado</button>
     </div>
@@ -3160,7 +3229,7 @@ function renderDashboard() {
   const total        = ent.length;
   const pending      = ent.filter(e => e.estado === 'pending').length;
   const transit      = ent.filter(e => e.estado === 'transit').length;
-  const delivered    = ent.filter(e => e.estado === 'delivered' || e.estado === 'asistido' || e.estado === 'cobrado').length;
+  const delivered    = ent.filter(e => ['delivered','asistido','cobrado','retirado','despachada'].includes(e.estado)).length;
   const rescheduled  = ent.filter(e => e.estado === 'rescheduled').length;
 
   const pendTransit = pending + transit;
@@ -3197,6 +3266,7 @@ function renderDashboard() {
         ${e.tipo === 'asistencia' ? '<span style="font-size:10px;background:#7C3AED22;color:#A855F7;border-radius:4px;padding:1px 5px;font-weight:600;margin-left:4px">🛠️</span>' : ''}
         ${e.tipo === 'retiro'     ? '<span style="font-size:10px;background:#1E6FFF22;color:#4D8FFF;border-radius:4px;padding:1px 5px;font-weight:600;margin-left:4px">🔄</span>' : ''}
         ${e.tipo === 'cobranza'   ? '<span style="font-size:10px;background:#00D68F22;color:#00A870;border-radius:4px;padding:1px 5px;font-weight:600;margin-left:4px">💰</span>' : ''}
+        ${e.tipo === 'encomienda'  ? '<span style="font-size:10px;background:#7C3AED22;color:#A855F7;border-radius:4px;padding:1px 5px;font-weight:600;margin-left:4px">📬</span>' : ''}
       </td>
         <td style="color:var(--white-dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.direccion}</td>
         <td>${e.zona || '—'}</td>
@@ -3223,11 +3293,20 @@ function renderEntregas(filtro = '', estadoFiltro = '') {
   if ((rol === 'vendedor' || rol === 'editor') && APP._tabVendedor !== 'todas') {
     lista = lista.filter(e => e.vendedor === u.nombre);
   }
-  if (rol === 'tecnico' && APP._tabTecnico !== 'todas') {
-    lista = lista.filter(e => e.tecnico === u.nombre || e.tipo === 'asistencia');
+  if (rol === 'tecnico') {
+    // Técnico solo ve asistencias técnicas asignadas a él
+    if (APP._tabTecnico !== 'todas') {
+      lista = lista.filter(e => e.tecnico === u.nombre && e.tipo === 'asistencia');
+    } else {
+      lista = lista.filter(e => e.tipo === 'asistencia');
+    }
   }
   if (rol === 'operaciones' || rol === 'compras_cobranzas') {
     lista = lista.filter(e => e.tipo === 'retiro' || e.tipo === 'cobranza');
+  }
+  if (rol === 'chofer') {
+    // Chofer ve entregas, cobranzas, retiros, encomiendas asignadas a él — NO asistencias técnicas
+    lista = lista.filter(e => e.chofer === u.nombre && e.tipo !== 'asistencia');
   }
   if (filtro) {
     const f = filtro.toLowerCase();
@@ -3724,14 +3803,15 @@ function badgeHTML(estado) {
     rescheduled: ['rescheduled','🔄', 'Reprogramado'],
     asistido:    ['delivered',  '🛠️', 'Asistido'],
     retirado:    ['transit',    '📦', 'Retirado'],
-    cobrado:     ['delivered',  '💰', 'Cobrado']
+    cobrado:     ['delivered',  '💰', 'Cobrado'],
+    cambio_producto: ['transit', '🔄', 'Cambio de Producto']
   };
   const [cls, icon, label] = mapa[estado] || ['pending','❓','Desconocido'];
   return `<span class="badge dot ${cls}">${label}</span>`;
 }
 
 function estadoLabel(estado) {
-  return { pending: 'Pendiente', transit: 'En camino', delivered: 'Entregado', rescheduled: 'Reprogramado', asistido: 'Asistido', retirado: 'Retirado', cobrado: 'Cobrado' }[estado] || estado;
+  return { pending: 'Pendiente', transit: 'En camino', delivered: 'Entregado', rescheduled: 'Reprogramado', asistido: 'Asistido', retirado: 'Retirado', cobrado: 'Cobrado', cambio_producto: 'Cambio de Producto', despachada: 'Despachada' }[estado] || estado;
 }
 
 function updateBadges() {
@@ -4945,11 +5025,18 @@ function onTipoChange() {
     const inp = document.getElementById('f-codigo');
     if (inp) inp.placeholder = 'Ej: PROV-001';
   } else if (tipo === 'cobranza') {
-    // Cobranza: código cliente como siempre, chofer
     choferRow?.classList.remove('hidden');
     if (labelCodigo) labelCodigo.textContent = 'Código cliente';
     const inp = document.getElementById('f-codigo');
     if (inp) inp.placeholder = 'Ej: CLI001';
+  } else if (tipo === 'encomienda') {
+    choferRow?.classList.remove('hidden');
+    if (labelCodigo) labelCodigo.textContent = 'Código cliente';
+    const inp2 = document.getElementById('f-codigo');
+    if (inp2) inp2.placeholder = 'Ej: CLI001';
+    // Sugerir transportadora en observaciones
+    const obs = document.getElementById('f-obs');
+    if (obs && !obs.value) obs.placeholder = 'Nombre de la transportadora (ej: Transporte García)';
   } else {
     // Reparto
     choferRow?.classList.remove('hidden');
