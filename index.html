@@ -1652,7 +1652,7 @@ html { -webkit-text-size-adjust: 100%; }
           </div>
 
           <!-- Búsqueda rápida proveedores (solo en retiro) -->
-          <div id="carga-rapida-proveedor" class="hidden" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div id="carga-rapida-proveedor" style="display:none;gap:10px;align-items:flex-end;flex-wrap:wrap">
             <div class="form-group" style="flex:1;min-width:180px;position:relative">
               <label>Buscar Proveedor</label>
               <input type="text" id="quick-prov" placeholder="Nombre o código del proveedor..." oninput="buscarProveedorRapidoForm()" autocomplete="off">
@@ -5216,7 +5216,7 @@ function onTipoChange() {
   const crCliente = document.getElementById('carga-rapida-cliente');
   const crProv    = document.getElementById('carga-rapida-proveedor');
   if (crCliente) crCliente.style.display = 'flex';
-  if (crProv)    { crProv.style.display = 'none'; crProv.classList.add('hidden'); }
+  if (crProv)    crProv.style.display = 'none';
   const qpl = document.getElementById('quick-prov-lista');
   if (qpl) { qpl.classList.add('hidden'); qpl.innerHTML = ''; }
 
@@ -5229,7 +5229,7 @@ function onTipoChange() {
     const crCliente = document.getElementById('carga-rapida-cliente');
     const crProv    = document.getElementById('carga-rapida-proveedor');
     if (crCliente) crCliente.style.display = 'none';
-    if (crProv)    { crProv.style.display = 'flex'; crProv.classList.remove('hidden'); }
+    if (crProv)    crProv.style.display = 'flex';
     // Limpiar campo proveedor
     const qp = document.getElementById('quick-prov');
     if (qp) { qp.value = ''; qp.focus(); }
