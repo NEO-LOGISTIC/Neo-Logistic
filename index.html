@@ -1564,8 +1564,7 @@ html { -webkit-text-size-adjust: 100%; }
             <div style="font-size:11px;font-weight:700;color:var(--white-dim);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">📦 Proveedor (retiros)</div>
             <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
               <div style="flex:1;min-width:180px;position:relative">
-                <input type="text" id="quick-prov" placeholder="Nombre o código del proveedor..." oninput="buscarProveedorRapidoForm()" autocomplete="off"
-                  style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13.5px;padding:9px 12px;outline:none;width:100%">
+                <input type="text" id="quick-prov" placeholder="Nombre o código del proveedor..." oninput="buscarProveedorRapidoForm()" autocomplete="off" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13.5px;padding:9px 12px;outline:none;width:100%">
                 <div id="quick-prov-lista" style="display:none;position:absolute;z-index:500;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);max-height:200px;overflow-y:auto;width:100%;box-shadow:0 8px 32px #00000080;top:calc(100% + 4px);left:0"></div>
               </div>
               <button class="btn btn-secondary btn-sm" onclick="mostrarProveedoresRapido()">📋 Ver todos</button>
@@ -4553,7 +4552,7 @@ function reprogramarDesdeChofer() {
 // ─── ACTUALIZAR RUTA/DASHBOARD PARA INCLUIR CHOFER ───────
 
 // Override renderEntregas table para mostrar columna chofer
-const _origRenderEntregas = renderEntregas;
+// _origRenderEntregas override removed
 
 
 // ─── SISTEMA DE PIN Y ROLES ────────────────────────────────
@@ -5211,7 +5210,7 @@ function cobradoSinAviso() {
 
 // ─── RETIRADO SIN AVISO ───────────────────────────────────
 // Override cambiarEstado para retiro — no notifica
-const _origCambiarEstado = cambiarEstado;
+// _origCambiarEstado override removed
 
 
 // ─── COBRADO / RETIRADO DESDE CHOFER ─────────────────────
@@ -5500,11 +5499,7 @@ function actualizarMapa() {
 }
 
 // Actualizar mapa cuando cambia el estado de entregas
-const _origRenderRutaChofer = renderRutaChofer;
-function renderRutaChofer() {
-  _origRenderRutaChofer();
-  if (_mapaAbierto) actualizarMapa();
-}
+// renderRutaChofer override removed - was causing infinite recursion
 
 
 
