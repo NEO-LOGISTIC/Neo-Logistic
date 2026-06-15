@@ -5110,23 +5110,32 @@ function onTipoChange() {
   const labelCodigo = codigoGroup?.querySelector('label');
 
   // Reset all
-  [choferRow, tecnicoRow, provRow].forEach(el => el?.classList.add('hidden'));
+  [choferRow, tecnicoRow].forEach(el => el?.classList.add('hidden'));
+  // Reset proveedor list
+  const pl0 = document.getElementById('f-prov-lista');
+  if (pl0) { pl0.classList.add('hidden'); pl0.innerHTML = ''; }
+  // Reset label
+  const lbl0 = document.getElementById('f-codigo-label');
+  if (lbl0) lbl0.textContent = 'Código cliente';
+  const finp = document.getElementById('f-codigo');
+  if (finp) { finp.placeholder = 'CLI001'; finp.oninput = buscarClienteRapido; }
 
   if (tipo === 'asistencia') {
     tecnicoRow?.classList.remove('hidden');
     poblarSelectTecnico();
   } else if (tipo === 'retiro') {
-    provRow?.classList.remove('hidden');
     choferRow?.classList.remove('hidden');
+    // Actualizar label y placeholder del campo código
     if (labelCodigo) labelCodigo.textContent = 'Buscar Proveedor';
     const labelCod2 = document.getElementById('f-codigo-label');
     if (labelCod2) labelCod2.textContent = 'Buscar Proveedor';
     const inp = document.getElementById('f-codigo');
     if (inp) {
-      inp.placeholder = 'Código o nombre del proveedor...';
+      inp.placeholder = 'Escribí el nombre o código del proveedor...';
+      inp.value = '';
       inp.oninput = buscarProveedorEnForm;
     }
-    // Mostrar lista de proveedores disponibles
+    // Mostrar lista de proveedores
     mostrarListaProveedores();
   } else if (tipo === 'cobranza') {
     choferRow?.classList.remove('hidden');
