@@ -1581,9 +1581,10 @@ html { -webkit-text-size-adjust: 100%; }
             📝 Datos de la Entrega
           </div>
           <div class="form-grid">
-            <div class="form-group">
-              <label>Código cliente</label>
+            <div class="form-group" style="position:relative">
+              <label id="f-codigo-label">Código cliente</label>
               <input type="text" id="f-codigo" placeholder="CLI001">
+              <div id="f-prov-lista" class="hidden" style="position:absolute;z-index:100;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:180px;overflow-y:auto;width:100%;box-shadow:0 8px 24px #00000040;margin-top:2px"></div>
             </div>
             <div class="form-group">
               <label>Nombre cliente *</label>
@@ -3285,7 +3286,8 @@ function limpiarFormulario() {
   window._mapsLinkCompleto = null;
   window._proveedorSeleccionado = null;
   const cp = document.getElementById('f-coords-preview'); if(cp) cp.classList.add('hidden');
-  const pl = document.getElementById('f-prov-lista'); if(pl) pl.classList.add('hidden');
+  const pl = document.getElementById('f-prov-lista'); if(pl) { pl.classList.add('hidden'); pl.innerHTML=''; }
+  const labelCodR = document.getElementById('f-codigo-label'); if(labelCodR) labelCodR.textContent = 'Código cliente';
   const manInp = document.getElementById('f-vendedor-manual');
   if (manInp) manInp.remove();
   const waRow = document.getElementById('f-vendedor-wa-row');
@@ -5117,6 +5119,8 @@ function onTipoChange() {
     provRow?.classList.remove('hidden');
     choferRow?.classList.remove('hidden');
     if (labelCodigo) labelCodigo.textContent = 'Buscar Proveedor';
+    const labelCod2 = document.getElementById('f-codigo-label');
+    if (labelCod2) labelCod2.textContent = 'Buscar Proveedor';
     const inp = document.getElementById('f-codigo');
     if (inp) {
       inp.placeholder = 'Código o nombre del proveedor...';
@@ -5141,6 +5145,9 @@ function onTipoChange() {
     // Reparto
     choferRow?.classList.remove('hidden');
     if (labelCodigo) labelCodigo.textContent = 'Código de cliente';
+    const labelCod3 = document.getElementById('f-codigo-label');
+    if (labelCod3) labelCod3.textContent = 'Código cliente';
+    const pl = document.getElementById('f-prov-lista'); if (pl) pl.classList.add('hidden');
     const inp = document.getElementById('f-codigo');
     if (inp) inp.placeholder = 'CLI001';
   }
