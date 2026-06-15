@@ -6503,7 +6503,7 @@ async function optimizarRutas() {
   if (h3) h3.textContent = '🗺️ Optimizando rutas por cercanía...';
   if (info) info.innerHTML = '<div style="text-align:center;padding:20px"><div style="font-size:32px;margin-bottom:12px">⏳</div><div style="color:var(--white-dim);font-size:13px">Calculando ubicaciones y agrupando por cercanía...<br>Esto puede tardar unos segundos.</div></div>';
   if (grid) grid.style.display = 'none';
-  if (btnRow) btnRow.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-estado')">Cancelar</button>';
+  if (btnRow) btnRow.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="cerrarModal(&#39;modal-estado&#39;)">Cancelar</button>';
   modal.classList.remove('hidden');
 
   // Obtener coordenadas de cada entrega
@@ -6522,7 +6522,7 @@ async function optimizarRutas() {
 
   if (puntos.length === 0) {
     if (info) info.innerHTML = '<div style="color:var(--red);text-align:center;padding:20px">No se pudieron obtener coordenadas. Agregá links de Maps a las entregas.</div>';
-    if (btnRow) btnRow.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-estado')">Cerrar</button>';
+    if (btnRow) btnRow.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="cerrarModal(&#39;modal-estado&#39;)">Cerrar</button>';
     return;
   }
 
@@ -6847,7 +6847,6 @@ function guardarUbicacionChofer() {
 
 // ─── REEMPLAZAR extraerCoordenadas vieja con parsearCoordsDeLink ──
 
-);
 </script>
 </body>
 </html>
