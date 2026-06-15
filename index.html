@@ -137,6 +137,9 @@ function buscarProveedorRapidoForm() {
 
 function elegirProveedorRapido(codigo) {
   const p = (APP.proveedores || []).find(function(x) { return x.codigo === codigo; });
+  // Auto-seleccionar tipo retiro
+  const tipoSel = document.getElementById('f-tipo');
+  if (tipoSel && tipoSel.value !== 'retiro') { tipoSel.value = 'retiro'; onTipoChange(); }
   if (!p) return;
   // Rellenar formulario con datos del proveedor
   const clienteInp = document.getElementById('f-cliente');
@@ -1638,7 +1641,32 @@ html { -webkit-text-size-adjust: 100%; }
         <!-- Búsqueda rápida por código -->
         <div class="card mb-4">
           <div style="font-family:var(--font-display);font-weight:700;font-size:15px;margin-bottom:14px">
-            ⚡ Carga Rápida por Código de Cliente
+            ⚡ Acceso Rápido
+          </div>
+
+          <!-- Búsqueda Cliente -->
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--white-dim);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">👤 Cliente</div>
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-group" style="flex:1;min-width:180px">
+                <label>Código de cliente</label>
+                <input type="text" id="quick-code" placeholder="Ej: CLI001" oninput="buscarClienteRapido()" autocomplete="off">
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="buscarClienteRapido()">🔍 Buscar</button>
+            </div>
+          </div>
+
+          <!-- Búsqueda Proveedor -->
+          <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:4px">
+            <div style="font-size:11px;font-weight:700;color:var(--white-dim);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">📦 Proveedor (para retiros)</div>
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+              <div style="flex:1;min-width:180px;position:relative">
+                <input type="text" id="quick-prov" placeholder="Nombre o código del proveedor..." oninput="buscarProveedorRapidoForm()" autocomplete="off"
+                  style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13.5px;padding:9px 12px;outline:none;width:100%">
+                <div id="quick-prov-lista" style="display:none;position:absolute;z-index:500;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);max-height:220px;overflow-y:auto;width:100%;box-shadow:0 8px 32px #00000080;top:calc(100% + 4px);left:0"></div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="mostrarProveedoresRapido()">📋 Ver todos</button>
+            </div>
           </div>
           <!-- Búsqueda rápida clientes (se oculta en retiro) -->
           <div id="carga-rapida-cliente" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
@@ -5215,8 +5243,7 @@ function onTipoChange() {
   // Reset búsqueda rápida
   const crCliente = document.getElementById('carga-rapida-cliente');
   const crProv    = document.getElementById('carga-rapida-proveedor');
-  if (crCliente) crCliente.style.display = 'flex';
-  if (crProv)    crProv.style.display = 'none';
+  // Both search fields always visible
   const qpl = document.getElementById('quick-prov-lista');
   if (qpl) { qpl.classList.add('hidden'); qpl.innerHTML = ''; }
 
@@ -5228,8 +5255,10 @@ function onTipoChange() {
     // Mostrar búsqueda rápida de proveedores, ocultar la de clientes
     const crCliente = document.getElementById('carga-rapida-cliente');
     const crProv    = document.getElementById('carga-rapida-proveedor');
-    if (crCliente) crCliente.style.display = 'none';
-    if (crProv)    crProv.style.display = 'flex';
+    // Both search fields always visible
+    const qp = document.getElementById('quick-prov');
+    if (qp) { qp.value = ''; qp.focus(); }
+    mostrarProveedoresRapido();
     // Limpiar campo proveedor
     const qp = document.getElementById('quick-prov');
     if (qp) { qp.value = ''; qp.focus(); }
