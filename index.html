@@ -1922,6 +1922,10 @@ html { -webkit-text-size-adjust: 100%; }
             ➕ Nuevo Técnico
           </button>
         </div>
+
+        <!-- Resumen asistencias pendientes por técnico -->
+        <div id="tecnicos-resumen-pendientes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px"></div>
+
         <div class="card">
           <div class="table-wrap">
             <table>
@@ -3418,7 +3422,14 @@ function renderRuta() {
   const empty = document.getElementById('ruta-empty');
   lista.innerHTML = '';
 
-  const activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  // Filtrar por chofer seleccionado si hay uno
+  const choferSel = document.getElementById('ruta-chofer-sel');
+  const choferFiltroRuta = choferSel ? choferSel.value : '';
+
+  let activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  if (choferFiltroRuta) {
+    activas = activas.filter(e => e.chofer === choferFiltroRuta || e.tecnico === choferFiltroRuta);
+  }
 
   // Tiempo estimado
   const tiempoMin = calcularTiempoTotal(activas.length);
@@ -5178,6 +5189,34 @@ function renderTecnicos() {
   if (!tbody) return;
   tbody.innerHTML = '';
 
+  // Resumen pendientes por técnico
+  const resumenEl = document.getElementById('tecnicos-resumen-pendientes');
+  if (resumenEl) {
+    const lista2 = APP.tecnicos || [];
+    if (lista2.length > 0) {
+      resumenEl.innerHTML = lista2.map(t => {
+        const pendientes = APP.entregas.filter(e => e.tecnico === t.nombre && e.tipo === 'asistencia' && (e.estado === 'pending' || e.estado === 'transit')).length;
+        const hoy       = APP.entregas.filter(e => e.tecnico === t.nombre && e.tipo === 'asistencia' && e.estado === 'asistido').length;
+        const color     = pendientes > 0 ? 'var(--yellow)' : 'var(--green)';
+        return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
+          '<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4C1D95);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0">' + (t.nombre||'?').charAt(0).toUpperCase() + '</div>' +
+          '<div><div style="font-weight:700;font-size:14px">' + t.nombre + '</div>' +
+          '<div style="font-size:11px;color:var(--white-dim)">' + (t.zona || 'Sin zona asignada') + '</div></div></div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<div style="background:var(--bg-input);border-radius:8px;padding:10px;text-align:center">' +
+          '<div style="font-size:24px;font-weight:800;color:' + color + ';font-family:var(--font-display)">' + pendientes + '</div>' +
+          '<div style="font-size:11px;color:var(--white-dim)">Pendientes</div></div>' +
+          '<div style="background:var(--bg-input);border-radius:8px;padding:10px;text-align:center">' +
+          '<div style="font-size:24px;font-weight:800;color:var(--green);font-family:var(--font-display)">' + hoy + '</div>' +
+          '<div style="font-size:11px;color:var(--white-dim)">Completadas hoy</div></div>' +
+          '</div></div>';
+      }).join('');
+    } else {
+      resumenEl.innerHTML = '';
+    }
+  }
+
   const lista = APP.tecnicos || [];
   if (lista.length === 0) { empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
@@ -6269,6 +6308,7 @@ function onRutaDiaChoferChange() {
   APP.ruta.chofer = sel.value;
   APP.ruta.telefono = opt?.dataset?.wa || '';
   guardarStorage();
+  renderRuta(); // actualizar lista al cambiar chofer
 }
 
 
