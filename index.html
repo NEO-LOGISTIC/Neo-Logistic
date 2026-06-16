@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#0A0F1E"/>
-<title>🧪 TEST — Neo Logistic</title>
+<title>Neo Logistic — Sistema de Entregas</title>
 
 <!-- SheetJS para leer/exportar Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -3385,7 +3385,13 @@ function renderRuta() {
   const empty = document.getElementById('ruta-empty');
   lista.innerHTML = '';
 
-  const activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  const choferSelRuta = document.getElementById('ruta-chofer-sel');
+  const filtroRuta = choferSelRuta ? choferSelRuta.value : '';
+
+  let activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  if (filtroRuta) {
+    activas = activas.filter(e => e.chofer === filtroRuta || e.tecnico === filtroRuta);
+  }
 
   // Tiempo estimado
   const tiempoMin = calcularTiempoTotal(activas.length);
@@ -3622,7 +3628,10 @@ function abrirMaps(direccion) {
 
 // ─── WHATSAPP RUTA ─────────────────────────────────────────
 function abrirModalEnvioRuta() {
-  const activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  const choferSelRuta = document.getElementById('ruta-chofer-sel');
+  const filtroRuta = choferSelRuta ? choferSelRuta.value : '';
+  let activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  if (filtroRuta) activas = activas.filter(e => e.chofer === filtroRuta || e.tecnico === filtroRuta);
   if (activas.length === 0) {
     toast('No hay entregas para enviar', 'error');
     return;
@@ -5981,7 +5990,10 @@ function generarRutaChoferMaps() {
 
 // Override generarRutaGoogle (ruta del día) también con base
 function generarRutaGoogle() {
-  const activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  const choferSelRuta = document.getElementById('ruta-chofer-sel');
+  const filtroRuta = choferSelRuta ? choferSelRuta.value : '';
+  let activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  if (filtroRuta) activas = activas.filter(e => e.chofer === filtroRuta || e.tecnico === filtroRuta);
   if (activas.length === 0) { toast('No hay entregas pendientes', 'error'); return; }
   const url = generarURLMaps(activas, APP.config.direccionBase || DIR_BASE);
   if (!url) { toast('No hay paradas', 'error'); return; }
@@ -6344,6 +6356,7 @@ function onRutaDiaChoferChange() {
   APP.ruta.chofer = sel.value;
   APP.ruta.telefono = opt?.dataset?.wa || '';
   guardarStorage();
+  renderRuta();
 }
 
 
