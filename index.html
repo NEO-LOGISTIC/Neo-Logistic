@@ -10,10 +10,7 @@
 <title>Neo Logistic — Sistema de Entregas</title>
 
 <!-- SheetJS para leer/exportar Excel -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <!-- Leaflet Maps (OpenStreetMap - 100% gratis) -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -1420,7 +1417,7 @@ html { -webkit-text-size-adjust: 100%; }
         <!-- Búsqueda rápida por código -->
         <div class="card mb-4">
           <div style="font-family:var(--font-display);font-weight:700;font-size:15px;margin-bottom:14px">
-            ⚡ Acceso Rápido
+            ⚡ Carga Rápida por Código de Cliente
           </div>
           <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
             <div class="form-group" style="flex:1;min-width:180px">
@@ -1431,18 +1428,6 @@ html { -webkit-text-size-adjust: 100%; }
               🔍 Buscar
             </button>
           </div>
-          <!-- Búsqueda rápida proveedores -->
-          <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
-            <div style="font-size:11px;font-weight:700;color:var(--white-dim);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">📦 Proveedor (retiros)</div>
-            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-              <div style="flex:1;min-width:180px;position:relative">
-                <input type="text" id="quick-prov" placeholder="Nombre o código del proveedor..." oninput="buscarProveedorRapidoForm()" autocomplete="off" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13.5px;padding:9px 12px;outline:none;width:100%">
-                <div id="quick-prov-lista" style="display:none;position:absolute;z-index:500;background:var(--bg-card);border:1px solid var(--border-bright);border-radius:var(--radius-sm);max-height:200px;overflow-y:auto;width:100%;box-shadow:0 8px 32px #00000080;top:calc(100% + 4px);left:0"></div>
-              </div>
-              <button class="btn btn-secondary btn-sm" onclick="mostrarProveedoresRapido()">📋 Ver todos</button>
-            </div>
-          </div>
-
           <!-- Resultado búsqueda rápida -->
           <div id="quick-result" class="hidden mt-4">
             <div style="background:var(--blue-glow);border:1px solid var(--border-bright);border-radius:var(--radius-sm);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
@@ -1512,7 +1497,6 @@ html { -webkit-text-size-adjust: 100%; }
                 <option value="asistencia">🛠️ Asistencia Técnica</option>
                 <option value="retiro">🔄 Retiro de Mercadería</option>
                 <option value="cobranza">💰 Cobranza</option>
-                <option value="encomienda">📬 Encomienda (Transportadora)</option>
               </select>
             </div>
             <div class="form-group">
@@ -2281,7 +2265,6 @@ html { -webkit-text-size-adjust: 100%; }
       <button class="btn btn-green" onclick="cambiarEstado('delivered')">✅ Entregado</button>
       <button class="btn btn-red" onclick="cambiarEstado('rescheduled')">🔄 Reprogramado</button>
       <button class="btn" style="background:#7C3AED;color:#fff" onclick="cambiarEstado('asistido')" id="btn-asistido">🛠️ Asistido</button>
-      <button class="btn" style="background:#FF8C00;color:#fff" onclick="cambioProductoTecnico()" id="btn-cambio-prod">🔄 Cambio de Producto</button>
       <button class="btn" style="background:var(--blue-dark);color:#fff" onclick="cambiarEstado('retirado')" id="btn-retirado">📦 Retirado</button>
       <button class="btn" style="background:#00A870;color:#fff" onclick="cobradoSinAviso()" id="btn-cobrado">💰 Cobrado</button>
     </div>
@@ -2795,8 +2778,6 @@ function iniciarListenersFirebase() {
     APP.choferes = Object.values(data);
     renderChoferes();
     poblarSelectChoferEnEntrega();
-    poblarSelectoresChofer();
-    poblarSelectorRutaDia();
     poblarSelectoresChofer(); // actualizar selector ruta por chofer
     updateBadges();
   });
@@ -3239,14 +3220,11 @@ function renderEntregas(filtro = '', estadoFiltro = '') {
   if ((rol === 'vendedor' || rol === 'editor') && APP._tabVendedor !== 'todas') {
     lista = lista.filter(e => e.vendedor === u.nombre);
   }
-  if (rol === 'tecnico') {
-    lista = lista.filter(e => e.tecnico === u.nombre && e.tipo === 'asistencia');
+  if (rol === 'tecnico' && APP._tabTecnico !== 'todas') {
+    lista = lista.filter(e => e.tecnico === u.nombre || e.tipo === 'asistencia');
   }
   if (rol === 'operaciones' || rol === 'compras_cobranzas') {
     lista = lista.filter(e => e.tipo === 'retiro' || e.tipo === 'cobranza');
-  }
-  if (rol === 'chofer') {
-    lista = lista.filter(e => e.chofer === u.nombre && e.tipo !== 'asistencia');
   }
   if (filtro) {
     const f = filtro.toLowerCase();
@@ -3357,10 +3335,8 @@ function renderRuta() {
   const lista = document.getElementById('ruta-lista');
   const empty = document.getElementById('ruta-empty');
   lista.innerHTML = '';
-  const choferSelRuta = document.getElementById('ruta-chofer-sel');
-  const filtroRuta = choferSelRuta ? choferSelRuta.value : '';
-  let activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
-  if (filtroRuta) activas = activas.filter(e => e.chofer === filtroRuta || e.tecnico === filtroRuta);
+
+  const activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
 
   // Tiempo estimado
   const tiempoMin = calcularTiempoTotal(activas.length);
@@ -4009,20 +3985,39 @@ function poblarSelectoresChofer() {
   if (!sel) return;
   const val = sel.value;
   sel.innerHTML = '<option value="">— Todos —</option>';
+
+  // Grupo Choferes
   if (APP.choferes && APP.choferes.length > 0) {
     sel.innerHTML += '<optgroup label="🚚 Choferes">';
     APP.choferes.forEach(c => {
-      sel.innerHTML += '<option value="' + c.nombre + '">' + (VEHICULO_ICONS[c.vehiculo]||'🚗') + ' ' + c.nombre + '</option>';
+      sel.innerHTML += `<option value="${c.nombre}">${VEHICULO_ICONS[c.vehiculo]||'🚗'} ${c.nombre}</option>`;
     });
     sel.innerHTML += '</optgroup>';
   }
+
+  // Grupo Técnicos
   if (APP.tecnicos && APP.tecnicos.length > 0) {
     sel.innerHTML += '<optgroup label="🛠️ Técnicos">';
     APP.tecnicos.forEach(t => {
-      sel.innerHTML += '<option value="' + t.nombre + '">🛠️ ' + t.nombre + '</option>';
+      sel.innerHTML += `<option value="${t.nombre}">🛠️ ${t.nombre}</option>`;
     });
     sel.innerHTML += '</optgroup>';
   }
+
+  // Choferes que aparecen en entregas pero no están registrados
+  const asignados = [...new Set(APP.entregas.map(e => e.chofer).filter(Boolean))];
+  const noRegistrados = asignados.filter(nombre =>
+    !APP.choferes.find(c => c.nombre === nombre) &&
+    !APP.tecnicos.find(t => t.nombre === nombre)
+  );
+  if (noRegistrados.length > 0) {
+    sel.innerHTML += '<optgroup label="Sin perfil">';
+    noRegistrados.forEach(nombre => {
+      sel.innerHTML += `<option value="${nombre}">${nombre}</option>`;
+    });
+    sel.innerHTML += '</optgroup>';
+  }
+
   if (val) sel.value = val;
 }
 
@@ -4424,7 +4419,7 @@ function reprogramarDesdeChofer() {
 // ─── ACTUALIZAR RUTA/DASHBOARD PARA INCLUIR CHOFER ───────
 
 // Override renderEntregas table para mostrar columna chofer
-// _origRenderEntregas override removed
+const _origRenderEntregas = renderEntregas;
 
 
 // ─── SISTEMA DE PIN Y ROLES ────────────────────────────────
@@ -4613,8 +4608,8 @@ function aplicarRol(rol) {
     const u2 = APP._usuario || {};
     const esPlanificador = u2.id === 'tc_002'; // Cristian planifica rutas técnicas
     const ocultarTec = esPlanificador
-      ? ['clientes','vendedores','choferes','proveedores','cobranzas','importar','config','estadisticas']
-      : ['planificar','clientes','vendedores','choferes','proveedores','cobranzas','importar','config','estadisticas'];
+      ? ['clientes','vendedores','choferes','importar','config']
+      : ['planificar','clientes','vendedores','choferes','importar','config'];
     ocultarTec.forEach(page => {
       const el = document.querySelector(`.nav-item[data-page="${page}"]`);
       if (el) el.style.display = 'none';
@@ -5082,7 +5077,7 @@ function cobradoSinAviso() {
 
 // ─── RETIRADO SIN AVISO ───────────────────────────────────
 // Override cambiarEstado para retiro — no notifica
-// _origCambiarEstado override removed
+const _origCambiarEstado = cambiarEstado;
 
 
 // ─── COBRADO / RETIRADO DESDE CHOFER ─────────────────────
@@ -5371,7 +5366,11 @@ function actualizarMapa() {
 }
 
 // Actualizar mapa cuando cambia el estado de entregas
-// renderRutaChofer override removed - was causing infinite recursion
+const _origRenderRutaChofer = renderRutaChofer;
+function renderRutaChofer() {
+  _origRenderRutaChofer();
+  if (_mapaAbierto) actualizarMapa();
+}
 
 
 
@@ -5421,15 +5420,6 @@ function abrirModalNuevoProveedor() {
   ['mp-codigo','mp-nombre','mp-direccion','mp-telefono','mp-contacto','mp-obs'].forEach(id => {
     document.getElementById(id).value = '';
   });
-  // Auto-generar código PROV-XXX
-  const provs = APP.proveedores || [];
-  let maxNum = 0;
-  provs.forEach(function(p) {
-    const m = String(p.codigo||'').match(/PROV-(\d+)/i);
-    if (m) maxNum = Math.max(maxNum, parseInt(m[1]));
-  });
-  const nextCod = 'PROV-' + String(maxNum + 1).padStart(3, '0');
-  document.getElementById('mp-codigo').value = nextCod;
   document.getElementById('modal-proveedor').classList.remove('hidden');
 }
 
@@ -6188,20 +6178,10 @@ function poblarSelectorRutaDia() {
   if (!sel) return;
   const val = sel.value;
   sel.innerHTML = '<option value="">— Seleccionar chofer —</option>';
-  if (APP.choferes && APP.choferes.length > 0) {
-    sel.innerHTML += '<optgroup label="🚚 Choferes">';
-    APP.choferes.forEach(c => {
-      sel.innerHTML += '<option value="' + c.nombre + '" data-wa="' + (c.wa||'') + '">' + (VEHICULO_ICONS[c.vehiculo]||'🚗') + ' ' + c.nombre + '</option>';
-    });
-    sel.innerHTML += '</optgroup>';
-  }
-  if (APP.tecnicos && APP.tecnicos.length > 0) {
-    sel.innerHTML += '<optgroup label="🛠️ Técnicos">';
-    APP.tecnicos.forEach(t => {
-      sel.innerHTML += '<option value="' + t.nombre + '" data-wa="' + (t.wa||'') + '">🛠️ ' + t.nombre + '</option>';
-    });
-    sel.innerHTML += '</optgroup>';
-  }
+  const todos = [...(APP.choferes||[]), ...(APP.tecnicos||[]).map(t=>({...t,esTecnico:true}))];
+  todos.forEach(c => {
+    sel.innerHTML += `<option value="${c.nombre}" data-wa="${c.wa||''}">${c.esTecnico?'🛠️':(VEHICULO_ICONS[c.vehiculo]||'🚗')} ${c.nombre}</option>`;
+  });
   if (val) sel.value = val;
 }
 
@@ -6213,7 +6193,6 @@ function onRutaDiaChoferChange() {
   APP.ruta.chofer = sel.value;
   APP.ruta.telefono = opt?.dataset?.wa || '';
   guardarStorage();
-  renderRuta();
 }
 
 
@@ -6405,7 +6384,7 @@ async function optimizarRutas() {
   if (h3) h3.textContent = '🗺️ Optimizando rutas por cercanía...';
   if (info) info.innerHTML = '<div style="text-align:center;padding:20px"><div style="font-size:32px;margin-bottom:12px">⏳</div><div style="color:var(--white-dim);font-size:13px">Calculando ubicaciones y agrupando por cercanía...<br>Esto puede tardar unos segundos.</div></div>';
   if (grid) grid.style.display = 'none';
-  if (btnRow) btnRow.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="cerrarModal(&#39;modal-estado&#39;)">Cancelar</button>';
+  if (btnRow) btnRow.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-estado')">Cancelar</button>';
   modal.classList.remove('hidden');
 
   // Obtener coordenadas de cada entrega
@@ -6424,7 +6403,7 @@ async function optimizarRutas() {
 
   if (puntos.length === 0) {
     if (info) info.innerHTML = '<div style="color:var(--red);text-align:center;padding:20px">No se pudieron obtener coordenadas. Agregá links de Maps a las entregas.</div>';
-    if (btnRow) btnRow.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="cerrarModal(&#39;modal-estado&#39;)">Cerrar</button>';
+    if (btnRow) btnRow.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-estado')">Cerrar</button>';
     return;
   }
 
@@ -6748,135 +6727,6 @@ function guardarUbicacionChofer() {
 }
 
 // ─── REEMPLAZAR extraerCoordenadas vieja con parsearCoordsDeLink ──
-
-// ─── ACCESO RÁPIDO PROVEEDOR ─────────────────────────────
-
-function mostrarProveedoresRapido() {
-  const listaEl = document.getElementById('quick-prov-lista');
-  if (!listaEl) return;
-  listaEl.style.display = 'block';
-
-  function renderLista(provs) {
-    if (!provs || provs.length === 0) {
-      listaEl.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--white-dim)">No hay proveedores. Agregá uno en Proveedores.</div>';
-      return;
-    }
-    listaEl.innerHTML = provs.map(function(p) {
-      const cod = p.codigo || p.id || '—';
-      const nom = p.nombre || '(sin nombre)';
-      const dir = p.obs || p.direccion || '';
-      return '<div onclick="elegirProveedorRapido(&#39;' + cod + '&#39;)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background=\'var(--bg-card2)\'" onmouseout="this.style.background=\'\'">' +
-      '<div style="font-weight:600">' + nom + '</div>' +
-      '<div style="font-size:11px;color:var(--white-dim)">' + cod + (dir ? ' · ' + dir.substring(0,40) : '') + '</div></div>';
-    }).join('');
-  }
-
-  // Usar APP.proveedores si está cargado
-  if (APP.proveedores && APP.proveedores.length > 0) {
-    renderLista(APP.proveedores);
-  } else {
-    // Cargar directo desde Firebase
-    listaEl.innerHTML = '<div style="padding:10px 14px;font-size:12px;color:var(--white-dim)">⏳ Cargando...</div>';
-    db.ref('proveedores').once('value', function(snap) {
-      const data = snap.val() || {};
-      const provs = Object.values(data);
-      APP.proveedores = provs;
-      renderLista(provs);
-    });
-  }
-}
-
-function buscarProveedorRapidoForm() {
-  const inp = document.getElementById('quick-prov');
-  const listaEl = document.getElementById('quick-prov-lista');
-  if (!inp || !listaEl) return;
-  const q = inp.value.toLowerCase().trim();
-  if (!q) { mostrarProveedoresRapido(); return; }
-  // Use APP.proveedores if loaded, else fetch
-  const source = APP.proveedores || [];
-  if (source.length === 0) { mostrarProveedoresRapido(); return; }
-  const provs = source.filter(function(p) {
-    const nom = (p.nombre||'').toLowerCase();
-    const cod = String(p.codigo||p.id||'').toLowerCase();
-    return nom.includes(q) || cod.includes(q);
-  });
-  listaEl.style.display = 'block';
-  if (provs.length === 0) {
-    listaEl.innerHTML = '<div style="padding:10px 14px;font-size:13px;color:var(--white-dim)">Sin resultados</div>';
-    return;
-  }
-  listaEl.innerHTML = provs.map(function(p) {
-    const cod = p.codigo || p.id || '—';
-    const nom = p.nombre || '(sin nombre)';
-    return '<div onclick="elegirProveedorRapido(&#39;' + cod + '&#39;)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background=\'var(--bg-card2)\'" onmouseout="this.style.background=\'\'">' +
-    '<div style="font-weight:600">' + nom + '</div>' +
-    '<div style="font-size:11px;color:var(--white-dim)">' + cod + (p.obs ? ' · ' + p.obs.substring(0,40) : (p.direccion ? ' · ' + p.direccion.substring(0,40) : '')) + '</div></div>';
-  }).join('');
-}
-
-function elegirProveedorRapido(codigo) {
-  const p = (APP.proveedores || []).find(function(x) { return x.codigo === codigo || x.id === codigo || String(x.codigo) === String(codigo); });
-  if (!p) return;
-  const listaEl = document.getElementById('quick-prov-lista');
-  if (listaEl) listaEl.style.display = 'none';
-  const qp = document.getElementById('quick-prov');
-  if (qp) qp.value = p.nombre;
-  // Cambiar tipo a retiro
-  const tipoSel = document.getElementById('f-tipo');
-  if (tipoSel) { tipoSel.value = 'retiro'; onTipoChange(); }
-  // Rellenar formulario
-  const fi = document.getElementById('f-cliente'); if (fi) fi.value = p.nombre;
-  const fd = document.getElementById('f-direccion');
-  if (fd) fd.value = (p.coords && p.coords.lat) ? p.coords.lat.toFixed(6)+','+p.coords.lng.toFixed(6) : (p.direccion||'');
-  const ft = document.getElementById('f-telefono'); if (ft) ft.value = p.telefono||'';
-  const fc = document.getElementById('f-codigo'); if (fc) fc.value = p.codigo;
-  if (p.coords) window._coordsActuales = p.coords;
-  toast('✅ Proveedor: ' + p.nombre, 'success');
-}
-
-// ─── CAMBIO DE PRODUCTO (técnico) ────────────────────────
-
-function cambioProductoTecnico() {
-  if (!APP._entregaSeleccionada) return;
-  const e = APP.entregas.find(x => x.id === APP._entregaSeleccionada);
-  if (!e) return;
-  if (!confirm('¿Marcar como Cambio de Producto? Pasará al planificador para asignar chofer.')) return;
-  const hora = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-  fbActualizarEntrega(e.id, {
-    estado: 'cambio_producto', tipo: 'entrega',
-    tecnico: e.tecnico||'', chofer: '', fechaEntrega: hora,
-    obs: (e.obs?e.obs+' | ':'')+'Cambio de producto por '+(APP._usuario&&APP._usuario.nombre||'')+' '+hora
-  }).then(() => {
-    toast('🔄 Pasado a planificador', 'success');
-    cerrarModal('modal-estado');
-    if (e.vendedor) {
-      const vend = APP.vendedores.find(v => v.nombre === e.vendedor);
-      if (vend && vend.wa) {
-        const msg = '🔄 *CAMBIO DE PRODUCTO — '+(APP.config.empresa||'Neo Logistic')+'*\n\n📋 Cliente: '+e.cliente+'\n🛠️ Técnico: '+(e.tecnico||'—')+'\n🕐 Hora: '+hora+'\n\n_Neo Logistic_';
-        window.open('https://api.whatsapp.com/send?phone='+vend.wa.replace(/\D/g,'')+'&text='+encodeURIComponent(msg),'_blank');
-      }
-    }
-  });
-}
-
-// ─── DESPACHADA para encomiendas ─────────────────────────
-
-function marcarDespachada(id) {
-  const e = APP.entregas.find(x => x.id === id);
-  if (!e) return;
-  const hora = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-  fbActualizarEntrega(id, {estado:'despachada',fechaEntrega:hora}).then(() => {
-    toast('📬 Encomienda despachada','success');
-    if (e.vendedor) {
-      const vend = APP.vendedores.find(v => v.nombre === e.vendedor);
-      if (vend && vend.wa) {
-        const msg = '📬 *ENCOMIENDA DESPACHADA*\n\n📋 Cliente: '+e.cliente+'\n🚚 Transportadora: '+(e.obs||'—')+'\n🕐 Hora: '+hora+'\n\n_Neo Logistic_';
-        window.open('https://api.whatsapp.com/send?phone='+vend.wa.replace(/\D/g,'')+'&text='+encodeURIComponent(msg),'_blank');
-      }
-    }
-  });
-}
-
 
 </script>
 </body>
