@@ -6765,7 +6765,7 @@ function mostrarProveedoresRapido() {
       const cod = p.codigo || p.id || '—';
       const nom = p.nombre || '(sin nombre)';
       const dir = p.obs || p.direccion || '';
-      return '<div onclick="elegirProveedorRapido('' + cod + '')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background='var(--bg-card2)'" onmouseout="this.style.background=''">' +
+      return '<div onclick="elegirProveedorRapido(&#39;' + cod + '&#39;)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background=\'var(--bg-card2)\'" onmouseout="this.style.background=\'\'">' +
       '<div style="font-weight:600">' + nom + '</div>' +
       '<div style="font-size:11px;color:var(--white-dim)">' + cod + (dir ? ' · ' + dir.substring(0,40) : '') + '</div></div>';
     }).join('');
@@ -6808,7 +6808,7 @@ function buscarProveedorRapidoForm() {
   listaEl.innerHTML = provs.map(function(p) {
     const cod = p.codigo || p.id || '—';
     const nom = p.nombre || '(sin nombre)';
-    return '<div onclick="elegirProveedorRapido('' + cod + '')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background='var(--bg-card2)'" onmouseout="this.style.background=''">' +
+    return '<div onclick="elegirProveedorRapido(&#39;' + cod + '&#39;)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseover="this.style.background=\'var(--bg-card2)\'" onmouseout="this.style.background=\'\'">' +
     '<div style="font-weight:600">' + nom + '</div>' +
     '<div style="font-size:11px;color:var(--white-dim)">' + cod + (p.obs ? ' · ' + p.obs.substring(0,40) : (p.direccion ? ' · ' + p.direccion.substring(0,40) : '')) + '</div></div>';
   }).join('');
