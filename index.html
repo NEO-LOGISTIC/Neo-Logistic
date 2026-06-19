@@ -1367,7 +1367,7 @@ html { -webkit-text-size-adjust: 100%; }
       <div class="page" id="page-entregas">
         <div class="section-head">
           <h2>Entregas del Día <small>Gestión completa de entregas</small></h2>
-          <div class="flex gap-2">
+          <div class="flex gap-2" style="flex-wrap:wrap;align-items:center">
             <div class="search-bar">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="var(--white-faint)"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
               <input type="text" id="search-entregas" placeholder="Buscar cliente, código, dirección..." oninput="filtrarEntregas()">
@@ -1379,6 +1379,18 @@ html { -webkit-text-size-adjust: 100%; }
               <option value="delivered">Entregado</option>
               <option value="rescheduled">Reprogramado</option>
             </select>
+            <select id="filter-fecha" onchange="onFiltroFechaChange()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13px;padding:8px 12px;outline:none;cursor:pointer">
+              <option value="todas">📅 Todas las fechas</option>
+              <option value="hoy" selected>📅 Hoy</option>
+              <option value="semana">📅 Esta semana</option>
+              <option value="mes">📅 Este mes</option>
+              <option value="personalizado">📅 Período...</option>
+            </select>
+            <div id="filtro-fechas-custom" style="display:none;gap:6px;align-items:center">
+              <input type="date" id="fecha-desde" onchange="filtrarEntregas()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13px;padding:7px 10px;outline:none">
+              <span style="color:var(--white-dim);font-size:12px">→</span>
+              <input type="date" id="fecha-hasta" onchange="filtrarEntregas()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13px;padding:7px 10px;outline:none">
+            </div>
           </div>
         </div>
 
@@ -2268,7 +2280,7 @@ html { -webkit-text-size-adjust: 100%; }
       <button class="btn btn-yellow" onclick="cambiarEstado('pending')">⏳ Pendiente</button>
       <button class="btn" style="background:var(--blue);color:#fff" onclick="cambiarEstado('transit')">🚚 En Camino</button>
       <button class="btn btn-green" onclick="cambiarEstado('delivered')">✅ Entregado</button>
-      <button class="btn btn-red" onclick="cambiarEstado('rescheduled')">🔄 Reprogramado</button>
+      <button class="btn btn-red" onclick="(function(){var id=APP._entregaSeleccionada;cerrarModal('modal-estado');reprogramarEntregaChofer(id);})()">🔄 Reprogramado</button>
       <button class="btn" style="background:#7C3AED;color:#fff" onclick="cambiarEstado('asistido')" id="btn-asistido">🛠️ Asistido</button>
       <button class="btn" style="background:var(--blue-dark);color:#fff" onclick="cambiarEstado('retirado')" id="btn-retirado">📦 Retirado</button>
       <button class="btn" style="background:#00A870;color:#fff" onclick="cobradoSinAviso()" id="btn-cobrado">💰 Cobrado</button>
@@ -3083,6 +3095,19 @@ function rellenarFormulario(cliente) {
     onVendedorChange();
   }
   document.getElementById('f-obs').value       = cliente.observacion || '';
+
+  // Copiar coordenadas/link de Maps del cliente para que la ruta sea exacta
+  window._coordsActuales = cliente.coords || null;
+  const mlInp = document.getElementById('f-maps-link');
+  if (mlInp) {
+    mlInp.value = cliente.mapsLink || '';
+    if (cliente.mapsLink && typeof extraerCoordenadas === 'function') extraerCoordenadas();
+  }
+  // Si la dirección guardada es genérica ("a confirmar") pero hay coordenadas, mostrar coords ya
+  const dirField = document.getElementById('f-direccion');
+  if (dirField && cliente.coords && /^a\s*confirmar$/i.test((cliente.direccion||'').trim())) {
+    dirField.value = cliente.coords.lat.toFixed(6) + ',' + cliente.coords.lng.toFixed(6);
+  }
 }
 
 function cargarDesdeCliente() {
@@ -3092,8 +3117,17 @@ function cargarDesdeCliente() {
 
 // ─── GUARDAR ENTREGA ────────────────────────────────────────
 function guardarEntrega() {
-  const cliente   = document.getElementById('f-cliente').value.trim();
-  const direccion = document.getElementById('f-direccion').value.trim();
+  const cliente = document.getElementById('f-cliente').value.trim();
+  let direccion = document.getElementById('f-direccion').value.trim();
+
+  // Si hay coordenadas extraídas del link de Maps y la dirección está vacía
+  // o es un texto genérico tipo "a confirmar", usar las coordenadas como dirección
+  // para que la ruta del chofer sea exacta.
+  const dirGenerica = !direccion || /^a\s*confirmar$/i.test(direccion);
+  if (dirGenerica && window._coordsActuales) {
+    direccion = window._coordsActuales.lat.toFixed(6) + ',' + window._coordsActuales.lng.toFixed(6);
+    document.getElementById('f-direccion').value = direccion;
+  }
 
   if (!cliente || !direccion) {
     toast('Nombre de cliente y dirección son obligatorios', 'error');
@@ -3256,7 +3290,7 @@ function renderDashboard() {
 }
 
 // ─── RENDER ENTREGAS ───────────────────────────────────────
-function renderEntregas(filtro = '', estadoFiltro = '') {
+function renderEntregas(filtro = '', estadoFiltro = '', rangoFecha = null) {
   const tbody = document.getElementById('entregas-tbody');
   const empty = document.getElementById('entregas-empty');
   tbody.innerHTML = '';
@@ -3287,6 +3321,9 @@ function renderEntregas(filtro = '', estadoFiltro = '') {
   if (estadoFiltro) {
     lista = lista.filter(e => e.estado === estadoFiltro);
   }
+  if (rangoFecha) {
+    lista = lista.filter(e => entregaEnRangoFecha(e, rangoFecha));
+  }
 
   if (lista.length === 0) {
     empty.classList.remove('hidden');
@@ -3307,7 +3344,7 @@ function renderEntregas(filtro = '', estadoFiltro = '') {
       <td>
         <div class="action-btns">
           <button class="btn btn-ghost btn-xs" onclick="abrirModalEstado('${e.id}')">⚡</button>
-          <button class="btn btn-ghost btn-xs" onclick="abrirMaps('${e.direccion}')">📍</button>
+          <button class="btn btn-ghost btn-xs" onclick="abrirMaps('${e.direccion}','${e.id}')">📍</button>
           <button class="btn btn-ghost btn-xs" onclick="abrirModalAsignarChofer('${e.id}')" title="Asignar chofer">🚚</button>
           <button class="btn btn-ghost btn-xs" onclick="abrirModalAsignarVendedor('${e.id}')" title="Asignar vendedor">👤</button>
           <button class="btn btn-ghost btn-xs" onclick="eliminarEntrega('${e.id}')" style="color:var(--red)">✕</button>
@@ -3317,10 +3354,66 @@ function renderEntregas(filtro = '', estadoFiltro = '') {
   });
 }
 
+function onFiltroFechaChange() {
+  const val = document.getElementById('filter-fecha').value;
+  const customDiv = document.getElementById('filtro-fechas-custom');
+  if (val === 'personalizado') {
+    customDiv.style.display = 'flex';
+    const hoy = new Date().toISOString().slice(0,10);
+    if (!document.getElementById('fecha-desde').value) document.getElementById('fecha-desde').value = hoy;
+    if (!document.getElementById('fecha-hasta').value) document.getElementById('fecha-hasta').value = hoy;
+  } else {
+    customDiv.style.display = 'none';
+  }
+  filtrarEntregas();
+}
+
+function getFiltroFechaRango() {
+  const sel = document.getElementById('filter-fecha');
+  const val = sel ? sel.value : 'todas';
+  const hoy = new Date();
+  const yyyy = hoy.getFullYear();
+  const mm = String(hoy.getMonth()+1).padStart(2,'0');
+  const dd = String(hoy.getDate()).padStart(2,'0');
+  const hoyStr = yyyy+'-'+mm+'-'+dd;
+  if (val === 'todas') return null;
+  if (val === 'hoy') return { desde: hoyStr, hasta: hoyStr };
+  if (val === 'semana') {
+    const dow = hoy.getDay();
+    const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - ((dow+6)%7));
+    const domingo = new Date(lunes); domingo.setDate(lunes.getDate()+6);
+    return { desde: lunes.toISOString().slice(0,10), hasta: domingo.toISOString().slice(0,10) };
+  }
+  if (val === 'mes') return { desde: yyyy+'-'+mm+'-01', hasta: hoyStr };
+  if (val === 'personalizado') {
+    const desde = document.getElementById('fecha-desde').value;
+    const hasta = document.getElementById('fecha-hasta').value;
+    if (!desde || !hasta) return null;
+    return { desde, hasta };
+  }
+  return null;
+}
+
+function entregaEnRangoFecha(e, rango) {
+  if (!rango) return true;
+  if (e.estado === 'pending' || e.estado === 'transit') return true;
+  const fechaE = e.fecha || e.fechaCreacion || e.createdAt || '';
+  if (!fechaE) return true;
+  let fechaStr = '';
+  if (typeof fechaE === 'number') {
+    fechaStr = new Date(fechaE).toISOString().slice(0,10);
+  } else if (typeof fechaE === 'string') {
+    fechaStr = fechaE.slice(0,10);
+  }
+  if (!fechaStr) return true;
+  return fechaStr >= rango.desde && fechaStr <= rango.hasta;
+}
+
 function filtrarEntregas() {
   const filtro = document.getElementById('search-entregas').value;
   const estado = document.getElementById('filter-estado').value;
-  renderEntregas(filtro, estado);
+  const rango = getFiltroFechaRango();
+  renderEntregas(filtro, estado, rango);
 }
 
 // ─── RENDER CLIENTES ───────────────────────────────────────
@@ -3619,10 +3712,29 @@ function entregadoWhatsapp() {
 }
 
 // ─── RUTA GOOGLE MAPS ──────────────────────────────────────
-function abrirMaps(direccion) {
-  // Funciona en celular y PC
-  const ciudad = 'Asunción, Paraguay';
-  const query = encodeURIComponent(direccion + ', ' + ciudad);
+function abrirMaps(direccion, entregaId) {
+  const ciudad = ', Asunción, Paraguay';
+
+  // Si tenemos el id de la entrega, buscar coords o mapsLink primero
+  if (entregaId) {
+    const e = APP.entregas.find(x => x.id === entregaId);
+    if (e) {
+      // 1. Coordenadas exactas
+      if (e.coords && e.coords.lat) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${e.coords.lat},${e.coords.lng}`, '_blank');
+        return;
+      }
+      // 2. Link de Maps directo
+      const dirGenerica = !e.direccion || /^a\s*confirmar$/i.test(e.direccion.trim());
+      if (dirGenerica && e.mapsLink) {
+        window.open(e.mapsLink, '_blank');
+        return;
+      }
+    }
+  }
+
+  // Fallback: usar dirección en texto
+  const query = encodeURIComponent(direccion + ciudad);
   window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
 }
 
@@ -4481,15 +4593,84 @@ function confirmarEntregaChofer() {
 }
 
 function reprogramarEntregaChofer(id) {
-  if (!confirm('¿Reprogramar esta entrega?')) return;
-  fbActualizarEntrega(id, { estado: 'rescheduled' })
-    .then(() => toast('Entrega reprogramada', 'info'))
-    .catch(() => toast('Error al reprogramar', 'error'));
+  APP._reprogramarId = id;
+  // Eliminar overlay anterior si existe
+  const old = document.getElementById('overlay-reprogramar');
+  if (old) old.remove();
+  // Crear overlay dinámico — inmune al re-render de Firebase
+  const overlay = document.createElement('div');
+  overlay.id = 'overlay-reprogramar';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);max-width:420px;width:90%;padding:0;box-shadow:0 8px 32px #00000080">
+      <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin:0">🔄 Reprogramar Entrega</h3>
+        <button onclick="cerrarReprogramar()" style="background:none;border:none;color:var(--white-dim);font-size:20px;cursor:pointer;line-height:1;padding:0 4px">✕</button>
+      </div>
+      <div style="padding:20px">
+        <p style="color:var(--white-dim);font-size:14px;margin-bottom:16px">
+          Indicá el motivo por el cual no se pudo realizar la entrega hoy.
+        </p>
+        <div style="margin-bottom:16px">
+          <label style="font-weight:600;margin-bottom:8px;display:block;font-size:13px">Motivo de reprogramación *</label>
+          <textarea id="reprog-motivo-dyn" rows="4" placeholder="Ej: Cliente ausente, dirección cerrada, problema con el producto..."
+            style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:14px;padding:10px 12px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button onclick="cerrarReprogramar()" style="background:transparent;border:1px solid var(--border);color:var(--white-dim);padding:9px 18px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13.5px;font-weight:600;cursor:pointer">Cancelar</button>
+          <button onclick="confirmarReprogramacion()" style="background:var(--blue);color:#fff;border:none;padding:9px 18px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13.5px;font-weight:600;cursor:pointer">🔄 Confirmar</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  // Focus en el textarea
+  setTimeout(function() {
+    const ta = document.getElementById('reprog-motivo-dyn');
+    if (ta) ta.focus();
+  }, 50);
+}
+
+function cerrarReprogramar() {
+  const overlay = document.getElementById('overlay-reprogramar');
+  if (overlay) overlay.remove();
+}
+
+function confirmarReprogramacion() {
+  const id = APP._reprogramarId;
+  // Leer del textarea dinámico (nuevo) o del estático (fallback)
+  const taEl = document.getElementById('reprog-motivo-dyn') || document.getElementById('reprog-motivo');
+  const motivo = taEl ? taEl.value.trim() : '';
+  if (!motivo) { toast('Ingresá el motivo de reprogramación', 'error'); return; }
+  const e = APP.entregas.find(function(x) { return x.id === id; });
+  const obsAnterior = e && e.obs ? e.obs + ' | ' : '';
+  const hora = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  fbActualizarEntrega(id, {
+    estado: 'rescheduled',
+    obs: obsAnterior + '🔄 Reprogramado ' + hora + ': ' + motivo
+  })
+    .then(function() {
+      toast('Entrega reprogramada', 'info');
+      cerrarReprogramar();
+      // Notificar al vendedor por WhatsApp
+      if (e && e.vendedor) {
+        const vend = APP.vendedores.find(function(v) { return v.nombre === e.vendedor; });
+        if (vend && vend.wa && vend.notif !== false) {
+          const msg = '🔄 *ENTREGA REPROGRAMADA — ' + (APP.config.empresa||'Neo Logistic') + '*\n\n' +
+            '📋 Cliente: ' + (e.cliente||'—') + '\n' +
+            '📍 Dirección: ' + (e.direccion||'—') + '\n' +
+            '🕐 Hora: ' + hora + '\n' +
+            '❓ Motivo: ' + motivo + '\n\n_Neo Logistic_';
+          window.open('https://api.whatsapp.com/send?phone=' + vend.wa.replace(/\D/g,'') + '&text=' + encodeURIComponent(msg), '_blank');
+        }
+      }
+    })
+    .catch(function() { toast('Error al reprogramar', 'error'); });
 }
 
 function reprogramarDesdeChofer() {
-  if (APP._entregaSeleccionada) reprogramarEntregaChofer(APP._entregaSeleccionada);
-  cerrarModal('modal-confirmar-entrega');
+  const id = APP._entregaSeleccionada; // guardar antes de cerrar modal (cerrarModal lo borra)
+  document.getElementById('modal-confirmar-entrega').classList.add('hidden'); // cerrar sin borrar _entregaSeleccionada
+  if (id) reprogramarEntregaChofer(id);
 }
 
 // ─── ACTUALIZAR RUTA/DASHBOARD PARA INCLUIR CHOFER ───────
@@ -5499,10 +5680,55 @@ function actualizarMapa() {
 }
 
 // Actualizar mapa cuando cambia el estado de entregas
-const _origRenderRutaChofer = renderRutaChofer;
+// (renderRutaChofer override removed - caused infinite recursion)
+
 function renderRutaChofer() {
-  _origRenderRutaChofer();
-  if (_mapaAbierto) actualizarMapa();
+  const sel = document.getElementById('rc-selector');
+  const choferFiltro = sel ? sel.value : '';
+  const lista = document.getElementById('rc-lista');
+  const empty = document.getElementById('rc-empty');
+  const stats = document.getElementById('rc-stats');
+  if (!lista) return;
+
+  let activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
+  if (choferFiltro) {
+    activas = activas.filter(e => e.chofer === choferFiltro || e.tecnico === choferFiltro);
+  }
+
+  // Stats
+  if (stats) {
+    const total = activas.length;
+    const pendientes = activas.filter(e => e.estado === 'pending').length;
+    const enCamino  = activas.filter(e => e.estado === 'transit').length;
+    stats.innerHTML = total === 0 ? '' :
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-size:13px">' +
+      '📦 <strong>' + total + '</strong> paradas · ' +
+      '⏳ <strong>' + pendientes + '</strong> pendientes · ' +
+      '🚚 <strong>' + enCamino + '</strong> en camino' +
+      '</div>';
+  }
+
+  if (activas.length === 0) {
+    lista.innerHTML = '';
+    empty?.classList.remove('hidden');
+    return;
+  }
+  empty?.classList.add('hidden');
+
+  lista.innerHTML = activas.map((e, i) => `
+    <div class="route-item" style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div class="route-num" style="min-width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">${i+1}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px">${e.cliente}</div>
+        <div style="font-size:12px;color:var(--white-dim)">${e.direccion}${e.zona ? ' · ' + e.zona : ''}</div>
+        <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${tipoBadgeHTML(e.tipo)} ${badgeHTML(e.estado)}
+          ${e.chofer ? '<span style="font-size:11px;color:var(--white-dim)">👤 ' + e.chofer + '</span>' : ''}
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-xs" onclick="abrirMaps('${e.direccion.replace(/'/g,"\\'")}','${e.id}')">📍</button>
+    </div>
+  `).join('');
 }
 
 
@@ -5912,9 +6138,30 @@ function generarURLMaps(paradas, base) {
 
   // Usar coordenadas exactas si están disponibles, sino usar dirección de texto
   function getDestino(e) {
+    // 1. Prioridad: coordenadas exactas guardadas
     if (e.coords && e.coords.lat && e.coords.lng) {
       return encodeURIComponent(`${e.coords.lat},${e.coords.lng}`);
     }
+    // 2. Si la dirección es genérica ("a confirmar", vacía) y hay link de Maps,
+    //    extraer coordenadas del link directamente
+    const dirGenerica = !e.direccion || /^a\s*confirmar$/i.test(e.direccion.trim());
+    if (dirGenerica && e.mapsLink) {
+      const patrones = [
+        /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+        /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
+        /q=(-?\d+\.\d+),(-?\d+\.\d+)/,
+        /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
+      ];
+      for (const p of patrones) {
+        const m = e.mapsLink.match(p);
+        if (m) return encodeURIComponent(`${m[1]},${m[2]}`);
+      }
+      // Si no se pudieron extraer coords del link, usar el link directo
+      return encodeURIComponent(e.mapsLink);
+    }
+    // 3. Si la dirección es genérica y no hay link, omitir esta parada del texto
+    if (dirGenerica) return null;
+    // 4. Usar dirección de texto normal
     return encodeURIComponent(e.direccion + ciudad);
   }
 
@@ -6725,10 +6972,21 @@ function guardarEdicionCliente() {
   if (!nombre) { toast('El nombre es obligatorio', 'error'); return; }
 
   const codigo = document.getElementById('ec-codigo').value.trim() || codigoOriginal;
+
+  // Si hay coordenadas extraídas del link de Maps y la dirección está vacía
+  // o es un texto genérico tipo "a confirmar", usar las coordenadas como dirección
+  // para que la ruta del chofer sea exacta.
+  let direccionCliente = document.getElementById('ec-direccion').value.trim();
+  const dirGenericaCliente = !direccionCliente || /^a\s*confirmar$/i.test(direccionCliente);
+  if (dirGenericaCliente && window._ecCoordsActuales) {
+    direccionCliente = window._ecCoordsActuales.lat.toFixed(6) + ',' + window._ecCoordsActuales.lng.toFixed(6);
+    document.getElementById('ec-direccion').value = direccionCliente;
+  }
+
   const datos = {
     codigo,
     nombre,
-    direccion:   document.getElementById('ec-direccion').value.trim(),
+    direccion:   direccionCliente,
     telefono:    document.getElementById('ec-telefono').value.trim(),
     zona:        document.getElementById('ec-zona').value.trim(),
     vendedor:    document.getElementById('ec-vendedor').value.trim(),
@@ -6893,5 +7151,31 @@ function guardarUbicacionChofer() {
 // ─── REEMPLAZAR extraerCoordenadas vieja con parsearCoordsDeLink ──
 
 </script>
+
+
+
+    <!-- Modal Reprogramar -->
+    <div id="modal-reprogramar" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;">
+      <div class="modal-box" style="max-width:420px;background:var(--bg-card);border-radius:var(--radius);padding:0;width:90%">
+        <div class="modal-header">
+          <h3>🔄 Reprogramar Entrega</h3>
+          <button class="modal-close" onclick="document.getElementById('modal-reprogramar').style.display='none'">✕</button>
+        </div>
+        <div style="padding:20px">
+          <p style="color:var(--white-dim);font-size:14px;margin-bottom:16px">
+            Indicá el motivo por el cual no se pudo realizar la entrega hoy.
+          </p>
+          <div class="form-group" style="margin-bottom:16px">
+            <label style="font-weight:600;margin-bottom:8px;display:block">Motivo de reprogramación *</label>
+            <textarea id="reprog-motivo" rows="3" placeholder="Ej: Cliente ausente, dirección cerrada, problema con el producto..."
+              style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:14px;padding:10px 12px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="document.getElementById('modal-reprogramar').style.display='none'">Cancelar</button>
+            <button class="btn btn-primary" onclick="confirmarReprogramacion()">🔄 Confirmar Reprogramación</button>
+          </div>
+        </div>
+      </div>
+    </div>
 </body>
 </html>
