@@ -19,6 +19,7 @@
 <!-- Firebase SDK v10 (compat mode - works without bundler) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <style>
 /* ============================================================
@@ -1067,6 +1068,40 @@ html { -webkit-text-size-adjust: 100%; }
 }
 .page { padding-top: 0; }
 
+/* ─── ENTREGAS CARD MÓVIL ───────────────────────────── */
+.entrega-card-mobile {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.entrega-card-mobile.pendiente { border-left: 3px solid var(--yellow); }
+.entrega-card-mobile.transit   { border-left: 3px solid var(--blue); }
+.entrega-card-mobile.done      { border-left: 3px solid var(--green); opacity: .8; }
+.entrega-card-mobile.reprog    { border-left: 3px solid var(--red); }
+
+.ec-header { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px; }
+.ec-cliente { font-weight:700; font-size:15px; line-height:1.2; flex:1; }
+.ec-badges  { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+.ec-meta    { font-size:11.5px; color:var(--white-dim); margin-bottom:4px; display:flex; align-items:center; gap:5px; }
+.ec-fecha   { font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; display:inline-block; margin-bottom:8px; }
+.ec-fecha.hoy   { background:var(--green-bg); color:var(--green); }
+.ec-fecha.reciente { background:var(--yellow-bg); color:var(--yellow); }
+.ec-fecha.vieja    { background:var(--red-bg); color:var(--red); }
+.ec-actions { display:flex; gap:8px; margin-top:10px; }
+.ec-actions .btn-accion { flex:1; min-height:44px; font-size:14px; font-weight:700; border-radius:var(--radius-sm); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+.ec-actions .btn-maps   { background:var(--bg-input); border:1px solid var(--border); color:var(--white-dim); border-radius:var(--radius-sm); padding:0 12px; min-height:44px; cursor:pointer; font-size:14px; }
+.ec-actions .btn-del    { background:var(--red-bg); border:1px solid var(--red)40; color:var(--red); border-radius:var(--radius-sm); padding:0 10px; min-height:44px; cursor:pointer; font-size:14px; }
+
+/* Solo mostrar cards en móvil, tabla en desktop */
+.entregas-mobile-view  { display:none; }
+.entregas-desktop-view { display:block; }
+@media (max-width: 768px) {
+  .entregas-mobile-view  { display:block; }
+  .entregas-desktop-view { display:none; }
+}
+
 </style>
 </head>
 <body>
@@ -1367,7 +1402,7 @@ html { -webkit-text-size-adjust: 100%; }
       <div class="page" id="page-entregas">
         <div class="section-head">
           <h2>Entregas del Día <small>Gestión completa de entregas</small></h2>
-          <div class="flex gap-2" style="flex-wrap:wrap;align-items:center">
+          <div class="flex gap-2">
             <div class="search-bar">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="var(--white-faint)"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
               <input type="text" id="search-entregas" placeholder="Buscar cliente, código, dirección..." oninput="filtrarEntregas()">
@@ -1379,22 +1414,11 @@ html { -webkit-text-size-adjust: 100%; }
               <option value="delivered">Entregado</option>
               <option value="rescheduled">Reprogramado</option>
             </select>
-            <select id="filter-fecha" onchange="onFiltroFechaChange()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13px;padding:8px 12px;outline:none;cursor:pointer">
-              <option value="todas">📅 Todas las fechas</option>
-              <option value="hoy" selected>📅 Hoy</option>
-              <option value="semana">📅 Esta semana</option>
-              <option value="mes">📅 Este mes</option>
-              <option value="personalizado">📅 Período...</option>
-            </select>
-            <div id="filtro-fechas-custom" style="display:none;gap:6px;align-items:center">
-              <input type="date" id="fecha-desde" onchange="filtrarEntregas()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13px;padding:7px 10px;outline:none">
-              <span style="color:var(--white-dim);font-size:12px">→</span>
-              <input type="date" id="fecha-hasta" onchange="filtrarEntregas()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13px;padding:7px 10px;outline:none">
-            </div>
           </div>
         </div>
 
-        <div class="card">
+        <!-- Vista desktop: tabla -->
+        <div class="card entregas-desktop-view">
           <div class="table-wrap">
             <table id="entregas-table">
               <thead>
@@ -1407,12 +1431,22 @@ html { -webkit-text-size-adjust: 100%; }
                   <th class="col-hide-mobile">Vendedor</th>
                   <th class="col-hide-mobile">Teléfono</th>
                   <th>Estado</th>
+                  <th>Cargado</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody id="entregas-tbody"></tbody>
             </table>
           </div>
+          <div class="empty-state hidden" id="entregas-empty-desk">
+            <div class="empty-icon">🚚</div>
+            <p>No hay entregas cargadas. Comenzá con <strong>Nueva Entrega</strong>.</p>
+          </div>
+        </div>
+
+        <!-- Vista móvil: cards -->
+        <div class="entregas-mobile-view">
+          <div id="entregas-cards-mobile"></div>
           <div class="empty-state hidden" id="entregas-empty">
             <div class="empty-icon">🚚</div>
             <p>No hay entregas cargadas. Comenzá con <strong>Nueva Entrega</strong>.</p>
@@ -1433,8 +1467,8 @@ html { -webkit-text-size-adjust: 100%; }
           </div>
           <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
             <div class="form-group" style="flex:1;min-width:180px">
-              <label id="quick-label">Código de cliente</label>
-              <input type="text" id="quick-code" placeholder="Ej: CLI001" oninput="buscarClienteRapido()" autocomplete="off">
+              <label id="quick-label">Código o nombre de cliente</label>
+              <input type="text" id="quick-code" placeholder="Escribí código o nombre..." oninput="buscarClienteRapido()" autocomplete="off">
             </div>
             <button class="btn btn-secondary btn-sm" onclick="buscarClienteRapido()">
               🔍 Buscar
@@ -2073,6 +2107,12 @@ html { -webkit-text-size-adjust: 100%; }
             <div class="chart-bar-wrap" id="chart-choferes-stats"></div>
           </div>
 
+          <!-- Por técnico -->
+          <div class="card">
+            <div style="font-family:var(--font-display);font-weight:700;font-size:14px;margin-bottom:16px">🛠️ Asistencias por técnico</div>
+            <div class="chart-bar-wrap" id="chart-tecnicos-stats"></div>
+          </div>
+
         </div>
 
         <!-- Análisis de recompra por zona -->
@@ -2280,7 +2320,7 @@ html { -webkit-text-size-adjust: 100%; }
       <button class="btn btn-yellow" onclick="cambiarEstado('pending')">⏳ Pendiente</button>
       <button class="btn" style="background:var(--blue);color:#fff" onclick="cambiarEstado('transit')">🚚 En Camino</button>
       <button class="btn btn-green" onclick="cambiarEstado('delivered')">✅ Entregado</button>
-      <button class="btn btn-red" onclick="(function(){var id=APP._entregaSeleccionada;cerrarModal('modal-estado');reprogramarEntregaChofer(id);})()">🔄 Reprogramado</button>
+      <button class="btn btn-red" onclick="cambiarEstado('rescheduled')">🔄 Reprogramado</button>
       <button class="btn" style="background:#7C3AED;color:#fff" onclick="cambiarEstado('asistido')" id="btn-asistido">🛠️ Asistido</button>
       <button class="btn" style="background:var(--blue-dark);color:#fff" onclick="cambiarEstado('retirado')" id="btn-retirado">📦 Retirado</button>
       <button class="btn" style="background:#00A870;color:#fff" onclick="cobradoSinAviso()" id="btn-cobrado">💰 Cobrado</button>
@@ -2658,6 +2698,14 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
+
+// ─── AUTENTICACIÓN ANÓNIMA ─────────────────────────────────
+// Se ejecuta automáticamente al cargar — invisible para el usuario
+// Sin esto Firebase rechaza todas las conexiones (reglas: auth != null)
+auth.signInAnonymously().catch(err => {
+  console.warn('Firebase Auth error:', err);
+});
 
 // ─── FIREBASE STATUS INDICATOR ─────────────────────────────
 db.ref('.info/connected').on('value', snap => {
@@ -3014,18 +3062,24 @@ function closeSidebar() {
 
 // ─── CARGA RÁPIDA POR CÓDIGO ────────────────────────────────
 function buscarClienteRapido() {
-  const codigo = document.getElementById('quick-code').value.trim().toUpperCase();
+  const query = document.getElementById('quick-code').value.trim();
   const resultado = document.getElementById('quick-result');
   const tipo = document.getElementById('f-tipo')?.value;
 
-  if (!codigo) { resultado.classList.add('hidden'); return; }
+  // Limpiar sugerencias previas
+  const sugExist = document.getElementById('quick-sugerencias');
+  if (sugExist) sugExist.remove();
+
+  if (!query) { resultado.classList.add('hidden'); return; }
+
+  const q = query.toUpperCase();
 
   if (tipo === 'retiro') {
-    // Buscar en proveedores en lugar de clientes
+    // Buscar en proveedores
     const prov = (APP.proveedores || []).find(function(p) {
       const cod = String(p.codigo || p.id || '').toUpperCase();
       const nom = (p.nombre || '').toUpperCase();
-      return cod === codigo || cod.includes(codigo) || nom.includes(codigo);
+      return cod === q || cod.includes(q) || nom.includes(q);
     });
     if (prov) {
       document.getElementById('qr-nombre').textContent = prov.nombre;
@@ -3036,29 +3090,66 @@ function buscarClienteRapido() {
       rellenarFormularioProveedor(prov);
     } else {
       resultado.classList.add('hidden');
-      if (codigo.length >= 2) toast('No se encontró el proveedor: ' + codigo, 'error');
     }
     return;
   }
 
-  const cliente = APP.clientes.find(c =>
-    (c.codigo || '').toUpperCase() === codigo ||
-    (c.codigo || '').toUpperCase().includes(codigo)
-  );
+  // Buscar clientes por código O por nombre
+  const coincidencias = APP.clientes.filter(c =>
+    (c.codigo || '').toUpperCase().includes(q) ||
+    (c.nombre || '').toUpperCase().includes(q)
+  ).slice(0, 8);
 
-  if (cliente) {
+  if (coincidencias.length === 0) {
+    resultado.classList.add('hidden');
+    APP._clienteSeleccionado = null;
+    return;
+  }
+
+  if (coincidencias.length === 1) {
+    // Match único — cargar directo
+    const cliente = coincidencias[0];
     document.getElementById('qr-nombre').textContent = cliente.nombre;
     document.getElementById('qr-info').textContent =
       `${cliente.direccion} · ${cliente.zona || ''} · ${cliente.telefono || ''} · Vendedor: ${cliente.vendedor || ''}`;
     resultado.classList.remove('hidden');
     APP._clienteSeleccionado = cliente;
-    // Pre-rellenar formulario
     rellenarFormulario(cliente);
   } else {
+    // Múltiples coincidencias — mostrar lista de sugerencias
     resultado.classList.add('hidden');
-    APP._clienteSeleccionado = null;
-    if (codigo.length >= 2) toast('No se encontró el código: ' + codigo, 'error');
+    const wrap = document.getElementById('quick-code').closest('.form-group').parentNode;
+    const sug = document.createElement('div');
+    sug.id = 'quick-sugerencias';
+    sug.style.cssText = 'background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:8px;overflow:hidden;box-shadow:var(--shadow)';
+    sug.innerHTML = coincidencias.map((c, i) =>
+      `<div onclick="seleccionarClienteRapido(${i})" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background=\'var(--bg-card2)\'" onmouseout="this.style.background=\'\'">
+        <div>
+          <div style="font-weight:600;font-size:13.5px">${c.nombre}</div>
+          <div style="font-size:11.5px;color:var(--white-dim)">${c.direccion || ''} ${c.zona ? '· ' + c.zona : ''}</div>
+        </div>
+        <code style="font-size:10px;background:var(--bg-input);padding:2px 6px;border-radius:4px;color:var(--white-dim);flex-shrink:0;margin-left:10px">${c.codigo || ''}</code>
+      </div>`
+    ).join('');
+    wrap.appendChild(sug);
+    APP._quickCoincidencias = coincidencias;
   }
+}
+
+function seleccionarClienteRapido(idx) {
+  const cliente = (APP._quickCoincidencias || [])[idx];
+  if (!cliente) return;
+  // Limpiar sugerencias
+  const sug = document.getElementById('quick-sugerencias');
+  if (sug) sug.remove();
+  // Mostrar resultado
+  document.getElementById('quick-code').value = cliente.codigo || cliente.nombre;
+  document.getElementById('qr-nombre').textContent = cliente.nombre;
+  document.getElementById('qr-info').textContent =
+    `${cliente.direccion} · ${cliente.zona || ''} · ${cliente.telefono || ''} · Vendedor: ${cliente.vendedor || ''}`;
+  document.getElementById('quick-result').classList.remove('hidden');
+  APP._clienteSeleccionado = cliente;
+  rellenarFormulario(cliente);
 }
 
 function rellenarFormularioProveedor(prov) {
@@ -3290,10 +3381,13 @@ function renderDashboard() {
 }
 
 // ─── RENDER ENTREGAS ───────────────────────────────────────
-function renderEntregas(filtro = '', estadoFiltro = '', rangoFecha = null) {
-  const tbody = document.getElementById('entregas-tbody');
-  const empty = document.getElementById('entregas-empty');
-  tbody.innerHTML = '';
+function renderEntregas(filtro = '', estadoFiltro = '') {
+  const tbody   = document.getElementById('entregas-tbody');
+  const cardsEl = document.getElementById('entregas-cards-mobile');
+  const empty   = document.getElementById('entregas-empty');
+  const emptyDk = document.getElementById('entregas-empty-desk');
+  if (tbody)   tbody.innerHTML   = '';
+  if (cardsEl) cardsEl.innerHTML = '';
 
   let lista = APP.entregas;
 
@@ -3321,99 +3415,116 @@ function renderEntregas(filtro = '', estadoFiltro = '', rangoFecha = null) {
   if (estadoFiltro) {
     lista = lista.filter(e => e.estado === estadoFiltro);
   }
-  if (rangoFecha) {
-    lista = lista.filter(e => entregaEnRangoFecha(e, rangoFecha));
-  }
 
-  if (lista.length === 0) {
-    empty.classList.remove('hidden');
-    return;
+  const vacio = lista.length === 0;
+  if (empty)   vacio ? empty.classList.remove('hidden')   : empty.classList.add('hidden');
+  if (emptyDk) vacio ? emptyDk.classList.remove('hidden') : emptyDk.classList.add('hidden');
+  if (vacio) return;
+
+  // ── Helper fecha de carga ──
+  function infoFecha(e) {
+    const iso = e.fechaCreacion;
+    if (!iso) {
+      // Fallback: usar horaAgregado sin fecha (no sabemos el día)
+      return { label: e.horaAgregado ? '🕐 ' + e.horaAgregado : null, clase: 'reciente' };
+    }
+    const ahora = new Date();
+    const fecha  = new Date(iso);
+    const dias   = Math.floor((ahora - fecha) / 86400000);
+    const hora   = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const fechaStr = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+    if (dias === 0) return { label: 'Hoy ' + hora,           clase: 'hoy' };
+    if (dias === 1) return { label: 'Ayer ' + fechaStr,      clase: 'reciente' };
+    if (dias <= 3)  return { label: 'Hace ' + dias + 'd',    clase: 'reciente' };
+    return           { label: 'Hace ' + dias + 'd ⚠️',       clase: 'vieja' };
   }
-  empty.classList.add('hidden');
 
   lista.forEach((e, i) => {
-    tbody.innerHTML += `<tr>
-      <td style="color:var(--white-dim)">${i+1}</td>
-      <td><code style="font-size:11px;background:var(--bg-input);padding:2px 6px;border-radius:4px">${e.codigo || '—'}</code></td>
-      <td><strong>${e.cliente}</strong></td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--white-dim)">${e.direccion}</td>
-      <td>${e.zona || '—'}</td>
-      <td class="col-hide-mobile">${e.vendedor || '—'}</td>
-      <td class="col-hide-mobile">${e.telefono ? `<a href="tel:${e.telefono}" style="color:var(--blue-light)">${e.telefono}</a>` : '—'}</td>
-      <td>${tipoBadgeHTML(e.tipo)} ${badgeHTML(e.estado)}</td>
-      <td>
-        <div class="action-btns">
-          <button class="btn btn-ghost btn-xs" onclick="abrirModalEstado('${e.id}')">⚡</button>
-          <button class="btn btn-ghost btn-xs" onclick="abrirMaps('${e.direccion}','${e.id}')">📍</button>
-          <button class="btn btn-ghost btn-xs" onclick="abrirModalAsignarChofer('${e.id}')" title="Asignar chofer">🚚</button>
-          <button class="btn btn-ghost btn-xs" onclick="abrirModalAsignarVendedor('${e.id}')" title="Asignar vendedor">👤</button>
-          <button class="btn btn-ghost btn-xs" onclick="eliminarEntrega('${e.id}')" style="color:var(--red)">✕</button>
-        </div>
-      </td>
-    </tr>`;
+    const fi = infoFecha(e);
+    const isPend = e.estado === 'pending' || e.estado === 'transit';
+
+    // ── TABLA DESKTOP ──
+    if (tbody) {
+      const fechaTd = fi.label
+        ? `<span style="font-size:11px;padding:2px 7px;border-radius:99px;font-weight:600;background:${fi.clase==='hoy'?'var(--green-bg)':fi.clase==='vieja'?'var(--red-bg)':'var(--yellow-bg)'};color:${fi.clase==='hoy'?'var(--green)':fi.clase==='vieja'?'var(--red)':'var(--yellow)'}">${fi.label}</span>`
+        : '—';
+      tbody.innerHTML += `<tr>
+        <td style="color:var(--white-dim)">${i+1}</td>
+        <td><code style="font-size:11px;background:var(--bg-input);padding:2px 6px;border-radius:4px">${e.codigo || '—'}</code></td>
+        <td><strong>${e.cliente}</strong></td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--white-dim)">${e.direccion}</td>
+        <td>${e.zona || '—'}</td>
+        <td class="col-hide-mobile">${e.vendedor || '—'}</td>
+        <td class="col-hide-mobile">${e.telefono ? `<a href="tel:${e.telefono}" style="color:var(--blue-light)">${e.telefono}</a>` : '—'}</td>
+        <td>${tipoBadgeHTML(e.tipo)} ${badgeHTML(e.estado)}</td>
+        <td>${fechaTd}</td>
+        <td>
+          <div class="action-btns">
+            <button class="btn btn-ghost btn-xs" onclick="abrirModalEstado('${e.id}')">⚡</button>
+            <button class="btn btn-ghost btn-xs" onclick="abrirMaps('${e.direccion}','${e.id}')">📍</button>
+            <button class="btn btn-ghost btn-xs" onclick="abrirModalAsignarChofer('${e.id}')" title="Asignar chofer">🚚</button>
+            <button class="btn btn-ghost btn-xs" onclick="abrirModalAsignarVendedor('${e.id}')" title="Asignar vendedor">👤</button>
+            <button class="btn btn-ghost btn-xs" onclick="eliminarEntrega('${e.id}')" style="color:var(--red)">✕</button>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    // ── CARDS MÓVIL ──
+    if (cardsEl) {
+      // Color borde según estado
+      const claseCard = e.estado === 'pending' ? 'pendiente'
+        : e.estado === 'transit' ? 'transit'
+        : (e.estado === 'delivered' || e.estado === 'asistido' || e.estado === 'cobrado') ? 'done'
+        : e.estado === 'rescheduled' ? 'reprog' : 'pendiente';
+
+      // Botón principal según tipo
+      let btnColor = '#00D68F'; let btnLabel = '✅ Entregar';
+      if (e.tipo === 'cobranza')   { btnColor = '#00D68F'; btnLabel = '💰 Cobrado'; }
+      if (e.tipo === 'retiro')     { btnColor = '#1E6FFF'; btnLabel = '🔄 Retirado'; }
+      if (e.tipo === 'asistencia') { btnColor = '#7C3AED'; btnLabel = '🛠️ Asistido'; }
+      if (e.tipo === 'encomienda') { btnColor = '#A855F7'; btnLabel = '📬 Despachar'; }
+
+      const esDone = claseCard === 'done';
+
+      cardsEl.innerHTML += `
+        <div class="entrega-card-mobile ${claseCard}">
+          <div class="ec-header">
+            <div style="flex:1">
+              <div class="ec-cliente">${e.cliente}</div>
+              ${e.codigo ? `<div style="font-size:11px;color:var(--white-dim);margin-top:2px">📋 ${e.codigo}</div>` : ''}
+            </div>
+            <div class="ec-badges">
+              ${badgeHTML(e.estado)}
+              ${tipoBadgeHTML(e.tipo)}
+            </div>
+          </div>
+
+          ${fi.label ? `<div class="ec-fecha ${fi.clase}">⏱️ Cargado: ${fi.label}</div>` : ''}
+
+          <div class="ec-meta">📍 ${e.direccion}${e.zona ? ' · ' + e.zona : ''}</div>
+          ${e.chofer ? `<div class="ec-meta">🚚 ${e.chofer}</div>` : ''}
+          ${e.obs    ? `<div style="font-size:11.5px;color:var(--white-dim);padding:6px 8px;background:var(--bg-input);border-radius:6px;margin-bottom:4px">📝 ${e.obs}</div>` : ''}
+
+          ${!esDone ? `
+          <div class="ec-actions">
+            <button class="btn-accion" style="background:${btnColor};color:${btnColor==='#1E6FFF'?'#fff':'#0A1A12'}" onclick="abrirModalEstado('${e.id}')">${btnLabel}</button>
+            <button class="btn-maps" onclick="abrirMaps('${e.direccion.replace(/'/g,"\\'")}','${e.id}')">📍</button>
+            <button class="btn-del" onclick="eliminarEntrega('${e.id}')">✕</button>
+          </div>` : `
+          <div class="ec-actions">
+            <button class="btn-accion" style="background:var(--bg-input);color:var(--white-dim);border:1px solid var(--border)" onclick="abrirModalEstado('${e.id}')">⚡ Cambiar estado</button>
+            <button class="btn-maps" onclick="abrirMaps('${e.direccion.replace(/'/g,"\\'")}','${e.id}')">📍</button>
+          </div>`}
+        </div>`;
+    }
   });
-}
-
-function onFiltroFechaChange() {
-  const val = document.getElementById('filter-fecha').value;
-  const customDiv = document.getElementById('filtro-fechas-custom');
-  if (val === 'personalizado') {
-    customDiv.style.display = 'flex';
-    const hoy = new Date().toISOString().slice(0,10);
-    if (!document.getElementById('fecha-desde').value) document.getElementById('fecha-desde').value = hoy;
-    if (!document.getElementById('fecha-hasta').value) document.getElementById('fecha-hasta').value = hoy;
-  } else {
-    customDiv.style.display = 'none';
-  }
-  filtrarEntregas();
-}
-
-function getFiltroFechaRango() {
-  const sel = document.getElementById('filter-fecha');
-  const val = sel ? sel.value : 'todas';
-  const hoy = new Date();
-  const yyyy = hoy.getFullYear();
-  const mm = String(hoy.getMonth()+1).padStart(2,'0');
-  const dd = String(hoy.getDate()).padStart(2,'0');
-  const hoyStr = yyyy+'-'+mm+'-'+dd;
-  if (val === 'todas') return null;
-  if (val === 'hoy') return { desde: hoyStr, hasta: hoyStr };
-  if (val === 'semana') {
-    const dow = hoy.getDay();
-    const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - ((dow+6)%7));
-    const domingo = new Date(lunes); domingo.setDate(lunes.getDate()+6);
-    return { desde: lunes.toISOString().slice(0,10), hasta: domingo.toISOString().slice(0,10) };
-  }
-  if (val === 'mes') return { desde: yyyy+'-'+mm+'-01', hasta: hoyStr };
-  if (val === 'personalizado') {
-    const desde = document.getElementById('fecha-desde').value;
-    const hasta = document.getElementById('fecha-hasta').value;
-    if (!desde || !hasta) return null;
-    return { desde, hasta };
-  }
-  return null;
-}
-
-function entregaEnRangoFecha(e, rango) {
-  if (!rango) return true;
-  if (e.estado === 'pending' || e.estado === 'transit') return true;
-  const fechaE = e.fecha || e.fechaCreacion || e.createdAt || '';
-  if (!fechaE) return true;
-  let fechaStr = '';
-  if (typeof fechaE === 'number') {
-    fechaStr = new Date(fechaE).toISOString().slice(0,10);
-  } else if (typeof fechaE === 'string') {
-    fechaStr = fechaE.slice(0,10);
-  }
-  if (!fechaStr) return true;
-  return fechaStr >= rango.desde && fechaStr <= rango.hasta;
 }
 
 function filtrarEntregas() {
   const filtro = document.getElementById('search-entregas').value;
   const estado = document.getElementById('filter-estado').value;
-  const rango = getFiltroFechaRango();
-  renderEntregas(filtro, estado, rango);
+  renderEntregas(filtro, estado);
 }
 
 // ─── RENDER CLIENTES ───────────────────────────────────────
@@ -4594,52 +4705,16 @@ function confirmarEntregaChofer() {
 
 function reprogramarEntregaChofer(id) {
   APP._reprogramarId = id;
-  // Eliminar overlay anterior si existe
-  const old = document.getElementById('overlay-reprogramar');
-  if (old) old.remove();
-  // Crear overlay dinámico — inmune al re-render de Firebase
-  const overlay = document.createElement('div');
-  overlay.id = 'overlay-reprogramar';
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;';
-  overlay.innerHTML = `
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);max-width:420px;width:90%;padding:0;box-shadow:0 8px 32px #00000080">
-      <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-        <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin:0">🔄 Reprogramar Entrega</h3>
-        <button onclick="cerrarReprogramar()" style="background:none;border:none;color:var(--white-dim);font-size:20px;cursor:pointer;line-height:1;padding:0 4px">✕</button>
-      </div>
-      <div style="padding:20px">
-        <p style="color:var(--white-dim);font-size:14px;margin-bottom:16px">
-          Indicá el motivo por el cual no se pudo realizar la entrega hoy.
-        </p>
-        <div style="margin-bottom:16px">
-          <label style="font-weight:600;margin-bottom:8px;display:block;font-size:13px">Motivo de reprogramación *</label>
-          <textarea id="reprog-motivo-dyn" rows="4" placeholder="Ej: Cliente ausente, dirección cerrada, problema con el producto..."
-            style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:14px;padding:10px 12px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
-        </div>
-        <div style="display:flex;gap:10px;justify-content:flex-end">
-          <button onclick="cerrarReprogramar()" style="background:transparent;border:1px solid var(--border);color:var(--white-dim);padding:9px 18px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13.5px;font-weight:600;cursor:pointer">Cancelar</button>
-          <button onclick="confirmarReprogramacion()" style="background:var(--blue);color:#fff;border:none;padding:9px 18px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13.5px;font-weight:600;cursor:pointer">🔄 Confirmar</button>
-        </div>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  // Focus en el textarea
-  setTimeout(function() {
-    const ta = document.getElementById('reprog-motivo-dyn');
-    if (ta) ta.focus();
-  }, 50);
-}
-
-function cerrarReprogramar() {
-  const overlay = document.getElementById('overlay-reprogramar');
-  if (overlay) overlay.remove();
+  // Mover el modal al body para que no quede atrapado en ningún contenedor
+  const m = document.getElementById('modal-reprogramar');
+  document.body.appendChild(m);
+  document.getElementById('reprog-motivo').value = '';
+  m.style.cssText = 'display:flex !important;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;';
 }
 
 function confirmarReprogramacion() {
   const id = APP._reprogramarId;
-  // Leer del textarea dinámico (nuevo) o del estático (fallback)
-  const taEl = document.getElementById('reprog-motivo-dyn') || document.getElementById('reprog-motivo');
-  const motivo = taEl ? taEl.value.trim() : '';
+  const motivo = document.getElementById('reprog-motivo').value.trim();
   if (!motivo) { toast('Ingresá el motivo de reprogramación', 'error'); return; }
   const e = APP.entregas.find(function(x) { return x.id === id; });
   const obsAnterior = e && e.obs ? e.obs + ' | ' : '';
@@ -4650,7 +4725,7 @@ function confirmarReprogramacion() {
   })
     .then(function() {
       toast('Entrega reprogramada', 'info');
-      cerrarReprogramar();
+      document.getElementById('modal-reprogramar').style.display = 'none';
       // Notificar al vendedor por WhatsApp
       if (e && e.vendedor) {
         const vend = APP.vendedores.find(function(v) { return v.nombre === e.vendedor; });
@@ -5023,21 +5098,29 @@ function renderEstadisticas() {
   const periodo = document.getElementById('stats-periodo')?.value || 'mes';
   const entregas = filtrarEntregasPorPeriodo(periodo);
 
-  // KPIs
+  // KPIs generales
   const total     = entregas.length;
-  const delivered = entregas.filter(e => e.estado === 'delivered').length;
+  const delivered = entregas.filter(e => e.estado === 'delivered' || e.estado === 'cobrado' || e.estado === 'retirado' || e.estado === 'asistido' || e.estado === 'despachada').length;
   const pending   = entregas.filter(e => e.estado === 'pending' || e.estado === 'transit').length;
   const resch     = entregas.filter(e => e.estado === 'rescheduled').length;
   const tasaExito = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
+  // KPIs por tipo
+  const asistTotal = entregas.filter(e => e.tipo === 'asistencia').length;
+  const asistDone  = entregas.filter(e => e.tipo === 'asistencia' && e.estado === 'asistido').length;
+  const cobTotal   = entregas.filter(e => e.tipo === 'cobranza').length;
+  const cobDone    = entregas.filter(e => e.tipo === 'cobranza' && e.estado === 'cobrado').length;
+
   const kpisEl = document.getElementById('stats-kpis');
   if (kpisEl) {
     kpisEl.innerHTML = `
-      <div class="stat-card blue"><div class="stat-icon blue">📦</div><div class="stat-val">${total}</div><div class="stat-label">Total Entregas</div></div>
-      <div class="stat-card green"><div class="stat-icon green">✅</div><div class="stat-val">${delivered}</div><div class="stat-label">Entregadas</div></div>
+      <div class="stat-card blue"><div class="stat-icon blue">📦</div><div class="stat-val">${total}</div><div class="stat-label">Total Operaciones</div></div>
+      <div class="stat-card green"><div class="stat-icon green">✅</div><div class="stat-val">${delivered}</div><div class="stat-label">Completadas</div></div>
       <div class="stat-card yellow"><div class="stat-icon yellow">⏳</div><div class="stat-val">${pending}</div><div class="stat-label">Pendientes</div></div>
       <div class="stat-card red"><div class="stat-icon red">🔄</div><div class="stat-val">${resch}</div><div class="stat-label">Reprogramadas</div></div>
-      <div class="stat-card purple"><div class="stat-icon purple">🎯</div><div class="stat-val">${tasaExito}%</div><div class="stat-label">Tasa de Éxito</div></div>
+      <div class="stat-card purple"><div class="stat-icon purple">🛠️</div><div class="stat-val">${asistDone}<span style="font-size:14px;color:var(--white-dim)">/${asistTotal}</span></div><div class="stat-label">Asistencias</div></div>
+      <div class="stat-card green"><div class="stat-icon green">💰</div><div class="stat-val">${cobDone}<span style="font-size:14px;color:var(--white-dim)">/${cobTotal}</span></div><div class="stat-label">Cobranzas</div></div>
+      <div class="stat-card blue"><div class="stat-icon blue">🎯</div><div class="stat-val">${tasaExito}%</div><div class="stat-label">Tasa de Éxito</div></div>
     `;
   }
 
@@ -5049,6 +5132,8 @@ function renderEstadisticas() {
   renderChartGrupo('chart-vendedores-stats', entregas, 'vendedor', '#00D68F');
   // Chart por chofer
   renderChartGrupo('chart-choferes-stats', entregas, 'chofer', '#FFB800');
+  // Chart por técnico
+  renderChartTecnicos(entregas);
   // Análisis recompra
   renderAnalisisRecompra(entregas);
 }
@@ -5180,6 +5265,23 @@ function renderAnalisisRecompra(entregas) {
       Este análisis es la base para integración futura con CRM.
     </div>
   `;
+}
+
+// ─── CHART POR TÉCNICO ────────────────────────────────────
+function renderChartTecnicos(entregas) {
+  // Intentar renderizar en chart-tecnicos-stats si existe, si no salir silencioso
+  const el = document.getElementById('chart-tecnicos-stats');
+  if (!el) return;
+
+  const grupos = {};
+  (APP.tecnicos || []).forEach(t => {
+    const asist = entregas.filter(e => e.tecnico === t.nombre && e.tipo === 'asistencia').length;
+    const otras = entregas.filter(e => e.tecnico === t.nombre && e.tipo !== 'asistencia').length;
+    if (asist + otras > 0) grupos[t.nombre] = asist + otras;
+  });
+
+  const sorted = Object.entries(grupos).sort((a,b) => b[1]-a[1]);
+  renderBarChart(el, sorted, '#7C3AED');
 }
 
 // ─── EDITAR DIRECCIÓN DESDE VISTA CHOFER ──────────────────
@@ -5397,13 +5499,23 @@ function renderTecnicos() {
       resumenEl.innerHTML = '';
     } else {
       resumenEl.innerHTML = tecs.map(function(t) {
-        const pendientes = APP.entregas.filter(function(e) {
+        const asistPend = APP.entregas.filter(function(e) {
           return e.tecnico === t.nombre && e.tipo === 'asistencia' && (e.estado === 'pending' || e.estado === 'transit');
         }).length;
-        const hoy = APP.entregas.filter(function(e) {
+        const asistDone = APP.entregas.filter(function(e) {
           return e.tecnico === t.nombre && e.tipo === 'asistencia' && e.estado === 'asistido';
         }).length;
-        const color = pendientes > 0 ? 'var(--yellow)' : 'var(--green)';
+        const entTotal = APP.entregas.filter(function(e) {
+          return e.tecnico === t.nombre && e.tipo !== 'asistencia' && e.tipo !== 'cobranza';
+        }).length;
+        const entDone = APP.entregas.filter(function(e) {
+          return e.tecnico === t.nombre && e.tipo !== 'asistencia' && e.tipo !== 'cobranza' &&
+            (e.estado === 'delivered' || e.estado === 'retirado');
+        }).length;
+        const cobros = APP.entregas.filter(function(e) {
+          return e.tecnico === t.nombre && (e.tipo === 'cobranza' || e.estado === 'cobrado');
+        }).length;
+        const colorPend = asistPend > 0 ? 'var(--yellow)' : 'var(--green)';
         return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px">' +
           '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
           '<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4C1D95);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0">' + (t.nombre||'?').charAt(0).toUpperCase() + '</div>' +
@@ -5411,11 +5523,17 @@ function renderTecnicos() {
           '<div style="font-size:11px;color:var(--white-dim)">' + (t.zona || 'Sin zona asignada') + '</div></div></div>' +
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
           '<div style="background:var(--bg-input);border-radius:8px;padding:10px;text-align:center">' +
-          '<div style="font-size:24px;font-weight:800;color:' + color + ';font-family:var(--font-display)">' + pendientes + '</div>' +
-          '<div style="font-size:11px;color:var(--white-dim)">Pendientes</div></div>' +
+          '<div style="font-size:24px;font-weight:800;color:' + colorPend + ';font-family:var(--font-display)">' + asistPend + '</div>' +
+          '<div style="font-size:11px;color:var(--white-dim)">🛠️ Asist. pend.</div></div>' +
           '<div style="background:var(--bg-input);border-radius:8px;padding:10px;text-align:center">' +
-          '<div style="font-size:24px;font-weight:800;color:var(--green);font-family:var(--font-display)">' + hoy + '</div>' +
-          '<div style="font-size:11px;color:var(--white-dim)">Completadas hoy</div></div>' +
+          '<div style="font-size:24px;font-weight:800;color:var(--green);font-family:var(--font-display)">' + asistDone + '</div>' +
+          '<div style="font-size:11px;color:var(--white-dim)">🛠️ Asist. hechas</div></div>' +
+          '<div style="background:var(--bg-input);border-radius:8px;padding:10px;text-align:center">' +
+          '<div style="font-size:24px;font-weight:800;color:var(--blue-light);font-family:var(--font-display)">' + entDone + '<span style="font-size:13px;color:var(--white-dim)">/' + entTotal + '</span></div>' +
+          '<div style="font-size:11px;color:var(--white-dim)">📦 Entregas</div></div>' +
+          '<div style="background:var(--bg-input);border-radius:8px;padding:10px;text-align:center">' +
+          '<div style="font-size:24px;font-weight:800;color:var(--green);font-family:var(--font-display)">' + cobros + '</div>' +
+          '<div style="font-size:11px;color:var(--white-dim)">💰 Cobros</div></div>' +
           '</div></div>';
       }).join('');
     }
@@ -7155,7 +7273,7 @@ function guardarUbicacionChofer() {
 
 
     <!-- Modal Reprogramar -->
-    <div id="modal-reprogramar" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;">
+    <div id="modal-reprogramar" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
       <div class="modal-box" style="max-width:420px;background:var(--bg-card);border-radius:var(--radius);padding:0;width:90%">
         <div class="modal-header">
           <h3>🔄 Reprogramar Entrega</h3>
@@ -7172,6 +7290,20 @@ function guardarUbicacionChofer() {
           </div>
           <div style="display:flex;gap:10px;justify-content:flex-end">
             <button class="btn btn-ghost" onclick="document.getElementById('modal-reprogramar').style.display='none'">Cancelar</button>
+            <button class="btn btn-primary" onclick="confirmarReprogramacion()">🔄 Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>x">
+            Indicá el motivo por el cual no se pudo realizar la entrega hoy.
+          </p>
+          <div class="form-group" style="margin-bottom:16px">
+            <label style="font-weight:600;margin-bottom:8px;display:block">Motivo de reprogramación *</label>
+            <textarea id="reprog-motivo" rows="3" placeholder="Ej: Cliente ausente, dirección cerrada, problema con el producto..."
+              style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:14px;padding:10px 12px;resize:vertical;outline:none"></textarea>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="cerrarModal(&#39;modal-reprogramar&#39;)">Cancelar</button>
             <button class="btn btn-primary" onclick="confirmarReprogramacion()">🔄 Confirmar Reprogramación</button>
           </div>
         </div>
