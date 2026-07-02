@@ -1836,6 +1836,14 @@ html { -webkit-text-size-adjust: 100%; }
               <button class="btn btn-primary" onclick="enviarRutaChoferWA()">📱 Enviar por WhatsApp</button>
             </div>
           </div>
+
+          <!-- Selector punto de inicio -->
+          <div id="rc-inicio-wrap" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:none">
+            <div style="font-size:12px;color:var(--white-dim);margin-bottom:6px">🚦 ¿Desde qué parada empieza el chofer? <span style="color:var(--white-faint)">(opcional — si no elegís, se usa el orden recomendado)</span></div>
+            <select id="rc-inicio-selector" onchange="renderRutaChofer()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:13px;padding:8px 14px;outline:none;width:100%;cursor:pointer">
+              <option value="">— Orden recomendado —</option>
+            </select>
+          </div>
         </div>
 
 
@@ -5931,9 +5939,11 @@ function actualizarMapa() {
 function renderRutaChofer() {
   const sel = document.getElementById('rc-selector');
   const choferFiltro = sel ? sel.value : '';
-  const lista = document.getElementById('rc-lista');
-  const empty = document.getElementById('rc-empty');
-  const stats = document.getElementById('rc-stats');
+  const lista  = document.getElementById('rc-lista');
+  const empty  = document.getElementById('rc-empty');
+  const stats  = document.getElementById('rc-stats');
+  const inicioWrap = document.getElementById('rc-inicio-wrap');
+  const inicioSel  = document.getElementById('rc-inicio-selector');
   if (!lista) return;
 
   let activas = APP.entregas.filter(e => e.estado === 'pending' || e.estado === 'transit');
@@ -5941,16 +5951,47 @@ function renderRutaChofer() {
     activas = activas.filter(e => e.chofer === choferFiltro || e.tecnico === choferFiltro);
   }
 
+  // Mostrar/ocultar selector de punto de inicio
+  if (inicioWrap) {
+    if (activas.length > 1) {
+      inicioWrap.style.display = 'block';
+      // Repoblar solo si cambió la cantidad (evitar reset al seleccionar)
+      const optsActuales = inicioSel ? inicioSel.querySelectorAll('option[value]').length : 0;
+      if (inicioSel && optsActuales !== activas.length) {
+        const valorAnterior = inicioSel.value;
+        inicioSel.innerHTML = '<option value="">— Orden recomendado —</option>' +
+          activas.map(e => `<option value="${e.id}">${e.cliente} · ${e.zona || e.direccion.substring(0,30)}</option>`).join('');
+        if (valorAnterior) inicioSel.value = valorAnterior;
+      }
+    } else {
+      inicioWrap.style.display = 'none';
+      if (inicioSel) inicioSel.value = '';
+    }
+  }
+
+  // Reordenar si hay punto de inicio seleccionado
+  const inicioId = inicioSel ? inicioSel.value : '';
+  if (inicioId) {
+    const idxInicio = activas.findIndex(e => e.id === inicioId);
+    if (idxInicio > 0) {
+      // Rotamos la lista para que empiece desde la parada elegida
+      activas = [...activas.slice(idxInicio), ...activas.slice(0, idxInicio)];
+    }
+  }
+
   // Stats
   if (stats) {
     const total = activas.length;
     const pendientes = activas.filter(e => e.estado === 'pending').length;
-    const enCamino  = activas.filter(e => e.estado === 'transit').length;
+    const enCamino   = activas.filter(e => e.estado === 'transit').length;
+    const tiempoEst  = total * ((APP.config?.minEntrega || 10) + (APP.config?.minTraslado || 15));
     stats.innerHTML = total === 0 ? '' :
-      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-size:13px">' +
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;font-size:13px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">' +
       '📦 <strong>' + total + '</strong> paradas · ' +
       '⏳ <strong>' + pendientes + '</strong> pendientes · ' +
-      '🚚 <strong>' + enCamino + '</strong> en camino' +
+      '🚚 <strong>' + enCamino + '</strong> en camino · ' +
+      '⏱️ ~<strong>' + tiempoEst + '</strong> min estimados' +
+      (inicioId ? ' · <span style="color:var(--green);font-weight:600">🚦 Inicio personalizado</span>' : '') +
       '</div>';
   }
 
@@ -5962,10 +6003,10 @@ function renderRutaChofer() {
   empty?.classList.add('hidden');
 
   lista.innerHTML = activas.map((e, i) => `
-    <div class="route-item" style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
-      <div class="route-num" style="min-width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">${i+1}</div>
+    <div class="route-item" style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)${i===0 && inicioId ? ';border-left:3px solid var(--green);padding-left:10px' : ''}">
+      <div class="route-num" style="min-width:28px;height:28px;border-radius:50%;background:${i===0 && inicioId ? 'var(--green)' : 'var(--blue)'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">${i+1}</div>
       <div style="flex:1">
-        <div style="font-weight:700;font-size:14px">${e.cliente}</div>
+        <div style="font-weight:700;font-size:14px">${e.cliente}${i===0 && inicioId ? ' <span style="font-size:11px;background:var(--green-bg);color:var(--green);padding:1px 6px;border-radius:4px">INICIO</span>' : ''}</div>
         <div style="font-size:12px;color:var(--white-dim)">${e.direccion}${e.zona ? ' · ' + e.zona : ''}</div>
         <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           ${tipoBadgeHTML(e.tipo)} ${badgeHTML(e.estado)}
