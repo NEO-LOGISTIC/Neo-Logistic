@@ -1104,6 +1104,17 @@ html { -webkit-text-size-adjust: 100%; }
   .entregas-desktop-view { display:none; }
 }
 
+/* ─── FILTRO FECHAS ──────────────────────────────────────── */
+.btn-ff { padding:5px 12px; border-radius:99px; border:1px solid var(--border); background:var(--bg-input); color:var(--white-dim); font-family:var(--font-body); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.btn-ff:hover { border-color:var(--blue); color:var(--white); }
+.btn-ff.active { background:var(--blue); border-color:var(--blue); color:#fff; }
+
+/* ─── GESTIÓN ACCESOS ────────────────────────────────────── */
+.acceso-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+.acceso-row:last-child { border-bottom:none; }
+.acceso-pin { font-family:var(--font-display); font-weight:800; font-size:18px; letter-spacing:3px; min-width:56px; color:var(--blue-light); }
+.acceso-pin.bloqueado { color:var(--red); text-decoration:line-through; opacity:.5; }
+
 </style>
 </head>
 <body>
@@ -1184,7 +1195,7 @@ html { -webkit-text-size-adjust: 100%; }
     <div id="sidebar-logo" onclick="navigate('dashboard')" style="padding:16px 14px 14px">
       <div style="display:flex;align-items:center;gap:10px">
         <!-- Logo Neo Logistic estilo Neoprint - bold, moderno -->
-        <div style="width:38px;height:38px;background:linear-gradient(135deg,#1E6FFF 0%,#0A3BAA 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px #1E6FFF40;position:relative;overflow:hidden">
+        <div id="sidebar-logo-wrap" class="empresa-logo" style="width:38px;height:38px;background:linear-gradient(135deg,#1E6FFF 0%,#0A3BAA 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px #1E6FFF40;position:relative;overflow:hidden">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path d="M3 8L12 3L21 8V16L12 21L3 16V8Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
             <path d="M12 3V12M12 12L21 8M12 12L3 8" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
@@ -1192,7 +1203,7 @@ html { -webkit-text-size-adjust: 100%; }
           </svg>
         </div>
         <div>
-          <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:16px;letter-spacing:-.5px;line-height:1;color:#F5F7FF">
+          <div class="empresa-nombre" style="font-family:'Sora',sans-serif;font-weight:800;font-size:16px;letter-spacing:-.5px;line-height:1;color:#F5F7FF">
             NEO<span style="color:#4D8FFF">LOGISTIC</span>
           </div>
           <div style="font-size:9.5px;color:#4D8FFF;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;font-weight:600">
@@ -1278,9 +1289,18 @@ html { -webkit-text-size-adjust: 100%; }
         <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
         Configuración
       </div>
+      <div class="nav-item" onclick="navigate('ayuda')" data-page="ayuda">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+        Ayuda
+      </div>
     </nav>
 
     <div id="sidebar-footer">
+      <!-- Botón instalar PWA -->
+      <button id="btn-instalar-app" onclick="instalarApp()" class="hidden"
+        style="width:100%;margin-bottom:8px;background:#0F1729;border:1px solid #1E6FFF;border-radius:var(--radius-sm);color:#4D8FFF;font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;padding:8px;display:flex;align-items:center;justify-content:center;gap:6px">
+        📲 Instalar app
+      </button>
       <div style="display:flex;align-items:center;gap:10px;padding:6px 8px;margin-bottom:8px;background:var(--bg-input);border-radius:var(--radius-sm)">
         <div id="sidebar-avatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-dark));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;color:#fff;overflow:hidden">?</div>
         <div style="flex:1;min-width:0">
@@ -1422,6 +1442,22 @@ html { -webkit-text-size-adjust: 100%; }
               <option value="rescheduled">Reprogramado</option>
             </select>
           </div>
+        </div>
+
+        <!-- Filtro de fechas -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+          <button class="btn-ff active" id="ff-hoy"    onclick="setFiltroFecha('hoy')">📅 Hoy</button>
+          <button class="btn-ff"        id="ff-ayer"   onclick="setFiltroFecha('ayer')">Ayer</button>
+          <button class="btn-ff"        id="ff-semana" onclick="setFiltroFecha('semana')">Esta semana</button>
+          <button class="btn-ff"        id="ff-mes"    onclick="setFiltroFecha('mes')">Este mes</button>
+          <button class="btn-ff"        id="ff-periodo" onclick="setFiltroFecha('periodo')">📆 Período</button>
+          <button class="btn-ff"        id="ff-todos"  onclick="setFiltroFecha('todos')">Todos</button>
+          <div id="ff-rango" style="display:none;gap:6px;align-items:center;flex-wrap:wrap">
+            <input type="date" id="ff-desde" onchange="filtrarEntregas()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:12px;padding:6px 10px;outline:none">
+            <span style="color:var(--white-dim);font-size:12px">→</span>
+            <input type="date" id="ff-hasta" onchange="filtrarEntregas()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font-body);font-size:12px;padding:6px 10px;outline:none">
+          </div>
+          <span id="ff-count" style="font-size:12px;color:var(--white-dim)"></span>
         </div>
 
         <!-- Vista desktop: tabla -->
@@ -2176,23 +2212,52 @@ html { -webkit-text-size-adjust: 100%; }
             </div>
           </div>
 
+          <!-- Gestión de accesos -->
+          <div class="card">
+            <div style="font-family:var(--font-display);font-weight:700;font-size:15px;margin-bottom:4px">🔑 Gestión de Accesos</div>
+            <p style="font-size:12px;color:var(--white-dim);margin-bottom:16px">Administrá los PINs de todos los usuarios. Podés cambiar PINs o bloquear accesos.</p>
+            <div id="accesos-lista">
+              <div style="color:var(--white-dim);font-size:13px">Cargando usuarios...</div>
+            </div>
+          </div>
+
           <!-- Datos del negocio -->
           <div class="card">
             <div style="font-family:var(--font-display);font-weight:700;font-size:15px;margin-bottom:16px">🏢 Datos del Negocio</div>
+
+            <!-- Logo -->
+            <div style="margin-bottom:16px">
+              <label style="font-size:12px;color:var(--white-dim);display:block;margin-bottom:8px">Logo de la empresa</label>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div id="logo-preview" style="width:56px;height:56px;border-radius:var(--radius-sm);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--bg-input);flex-shrink:0">
+                  <span style="font-size:24px">🏢</span>
+                </div>
+                <div>
+                  <label for="logo-input" class="btn btn-secondary btn-sm" style="cursor:pointer;display:inline-block">📷 Subir logo</label>
+                  <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="subirLogo(this)">
+                  <button class="btn btn-ghost btn-sm" onclick="quitarLogo()" style="margin-left:6px">🗑️ Quitar</button>
+                  <div style="font-size:11px;color:var(--white-faint);margin-top:4px">PNG, JPG — aparece en el sidebar y en la pantalla de login</div>
+                </div>
+              </div>
+            </div>
+
             <div class="form-grid" style="grid-template-columns:1fr">
               <div class="form-group">
                 <label>Nombre empresa</label>
-                <input type="text" id="cfg-empresa" placeholder="Tu empresa" oninput="guardarConfigNegocio()">
+                <input type="text" id="cfg-empresa" placeholder="Tu empresa">
               </div>
               <div class="form-group">
                 <label>Ciudad base</label>
-                <input type="text" id="cfg-ciudad" placeholder="Ej: Asunción, Paraguay" oninput="guardarConfigNegocio()">
+                <input type="text" id="cfg-ciudad" placeholder="Ej: Asunción, Paraguay">
               </div>
               <div class="form-group">
                 <label>WhatsApp empresa</label>
-                <input type="text" id="cfg-wa" placeholder="+595 981 000000" oninput="guardarConfigNegocio()">
+                <input type="text" id="cfg-wa" placeholder="+595 981 000000">
               </div>
             </div>
+            <button class="btn btn-primary" onclick="guardarConfigNegocio()" style="margin-top:8px">
+              💾 Guardar datos
+            </button>
           </div>
 
           <!-- Limpiar datos -->
@@ -2446,6 +2511,96 @@ html { -webkit-text-size-adjust: 100%; }
 
 
 <!-- ══════════ MODAL: EDITAR UBICACIÓN CHOFER ══════════ -->
+<!-- ══════════ PÁGINA: AYUDA ══════════ -->
+<div class="page" id="page-ayuda">
+  <div class="section-head">
+    <h2>Ayuda <small>Manual de uso de Neo Logistic</small></h2>
+  </div>
+
+  <!-- Botón instalar app -->
+  <div class="card" style="background:linear-gradient(135deg,#0F1729,#0A2050);border-color:#1E6FFF40">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="font-size:36px">📲</div>
+      <div style="flex:1">
+        <div style="font-family:var(--font-display);font-weight:700;font-size:15px;margin-bottom:4px">Instalar Neo Logistic en tu celular</div>
+        <div style="font-size:12.5px;color:var(--white-dim)">Funciona como app nativa con ícono en la pantalla de inicio. Sin App Store, sin Play Store.</div>
+        <div style="margin-top:10px;font-size:12px;color:var(--white-faint);line-height:1.6">
+          📱 <strong style="color:var(--white-dim)">Android (Chrome):</strong> Abrí la URL → aparece el banner "Instalar" automáticamente<br>
+          🍎 <strong style="color:var(--white-dim)">iPhone (Safari):</strong> Botón compartir (⬆️) → "Agregar a pantalla de inicio"
+        </div>
+      </div>
+      <button id="btn-instalar-ayuda" onclick="instalarApp()" class="btn btn-primary" style="flex-shrink:0">📲 Instalar</button>
+    </div>
+  </div>
+
+  <!-- Roles -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:16px">
+    <div class="card">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:14px;margin-bottom:12px">👑 Administrador — PIN 0000</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--white-dim)">
+        <div>✅ Acceso total a todas las secciones</div>
+        <div>✅ Crear vendedores, choferes, técnicos</div>
+        <div>✅ Ver estadísticas y análisis</div>
+        <div>✅ Gestionar PINs y bloquear accesos</div>
+        <div>✅ Subir logo y configurar la empresa</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:14px;margin-bottom:12px">👤 Vendedor — PIN 1234–1299</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--white-dim)">
+        <div>✅ Cargar entregas, asistencias, retiros</div>
+        <div>✅ Ver sus propias entregas</div>
+        <div>✅ Recibir notificaciones WhatsApp</div>
+        <div>❌ No ve entregas de otros vendedores</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:14px;margin-bottom:12px">🚚 Chofer — PIN 2222+</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--white-dim)">
+        <div>✅ Ver sus entregas asignadas del día</div>
+        <div>✅ Marcar entregado / cobrado / retirado</div>
+        <div>✅ Abrir dirección en Maps con un tap</div>
+        <div>✅ Elegir punto de inicio de ruta</div>
+        <div>❌ No ve asistencias técnicas</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:14px;margin-bottom:12px">🛠️ Técnico — PIN 3333+</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--white-dim)">
+        <div>✅ Ver sus asistencias técnicas asignadas</div>
+        <div>✅ Ver entregas asignadas a él</div>
+        <div>✅ Marcar asistencias como completadas</div>
+        <div>❌ No ve proveedores ni compras</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flujo -->
+  <div class="card" style="margin-top:16px">
+    <div style="font-family:var(--font-display);font-weight:700;font-size:14px;margin-bottom:16px">📋 Flujo de trabajo diario</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;gap:12px"><div style="width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">1</div><div><div style="font-weight:600;font-size:13px">Vendedor carga una entrega</div><div style="font-size:12px;color:var(--white-dim)">Nueva Entrega → busca cliente por nombre o código → elige tipo → guarda</div></div></div>
+      <div style="display:flex;gap:12px"><div style="width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">2</div><div><div style="font-weight:600;font-size:13px">Admin asigna al chofer</div><div style="font-size:12px;color:var(--white-dim)">Entregas del Día → botón 🚚 → asigna chofer a cada entrega</div></div></div>
+      <div style="display:flex;gap:12px"><div style="width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">3</div><div><div style="font-weight:600;font-size:13px">Admin envía la ruta</div><div style="font-size:12px;color:var(--white-dim)">Ruta por Chofer → selecciona chofer → Enviar por WhatsApp</div></div></div>
+      <div style="display:flex;gap:12px"><div style="width:28px;height:28px;border-radius:50%;background:var(--green);color:#0A1A12;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">4</div><div><div style="font-weight:600;font-size:13px">Chofer ejecuta la ruta</div><div style="font-size:12px;color:var(--white-dim)">Ve sus paradas → toca dirección para Maps → marca cada una como entregada</div></div></div>
+      <div style="display:flex;gap:12px"><div style="width:28px;height:28px;border-radius:50%;background:var(--green);color:#0A1A12;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">5</div><div><div style="font-weight:600;font-size:13px">Admin monitorea en tiempo real</div><div style="font-size:12px;color:var(--white-dim)">Dashboard → ve el progreso y estadísticas del día</div></div></div>
+    </div>
+  </div>
+
+  <!-- Tips -->
+  <div class="card" style="margin-top:16px">
+    <div style="font-family:var(--font-display);font-weight:700;font-size:14px;margin-bottom:12px">💡 Tips útiles</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+      <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px"><div style="font-size:18px;margin-bottom:6px">📍</div><div style="font-weight:600;font-size:13px;margin-bottom:3px">Dirección exacta</div><div style="font-size:12px;color:var(--white-dim)">Pegá un link de Google Maps al cargar una entrega — usa coordenadas exactas para la ruta</div></div>
+      <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px"><div style="font-size:18px;margin-bottom:6px">🔍</div><div style="font-weight:600;font-size:13px;margin-bottom:3px">Buscador de clientes</div><div style="font-size:12px;color:var(--white-dim)">Escribí nombre o código — no hace falta saber el código exacto</div></div>
+      <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px"><div style="font-size:18px;margin-bottom:6px">🚦</div><div style="font-weight:600;font-size:13px;margin-bottom:3px">Inicio de ruta</div><div style="font-size:12px;color:var(--white-dim)">El chofer elige desde qué parada empezar y el sistema reordena</div></div>
+      <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px"><div style="font-size:18px;margin-bottom:6px">📅</div><div style="font-weight:600;font-size:13px;margin-bottom:3px">Filtro de fechas</div><div style="font-size:12px;color:var(--white-dim)">Hoy / Ayer / Esta semana / Período personalizado en Entregas del Día</div></div>
+      <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px"><div style="font-size:18px;margin-bottom:6px">🔒</div><div style="font-weight:600;font-size:13px;margin-bottom:3px">Seguridad</div><div style="font-size:12px;color:var(--white-dim)">Configuración → Gestión de Accesos → cambiá PIN o bloqueá usuarios</div></div>
+      <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:12px"><div style="font-size:18px;margin-bottom:6px">🏢</div><div style="font-weight:600;font-size:13px;margin-bottom:3px">Logo de la empresa</div><div style="font-size:12px;color:var(--white-dim)">Configuración → Datos del Negocio → subí tu logo PNG/JPG</div></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-ubicacion-chofer">
   <div class="modal-box" style="max-width:440px">
     <h3>📍 Actualizar Ubicación</h3>
@@ -2864,7 +3019,10 @@ function seedClientesIniciales() {
 // Todos los clientes conectados ven cambios al instante
 
 function iniciarListenersFirebase() {
-  // Entregas - solo las del día actual para velocidad
+  // ── ENTREGAS: carga completa, filtrado en cliente ───────────
+  // Nota: cuando todas las entregas tengan campo 'ts' se puede
+  // optimizar con orderByChild('ts') para cargar solo recientes.
+  // Por ahora se cargan todas para compatibilidad con datos viejos.
   db.ref('entregas').on('value', snap => {
     const data = snap.val() || {};
     APP.entregas = Object.values(data);
@@ -2876,10 +3034,8 @@ function iniciarListenersFirebase() {
     if (document.getElementById('page-estadisticas')?.classList.contains('active')) renderEstadisticas();
     refrescarMapaSiVisible();
     updateBadges();
-    // Badge planificar
     const bp2 = document.getElementById('badge-planificar');
     if (bp2) bp2.textContent = APP.entregas.filter(e => !e.chofer && (e.estado==='pending'||e.estado==='transit')).length;
-    // Si estamos en vista chofer, actualizar también
     if (APP._choferViewActivo) renderChoferView(APP._choferViewActivo);
   });
 
@@ -2917,6 +3073,10 @@ function iniciarListenersFirebase() {
   db.ref('pinesDinamicos').on('value', snap => {
     const data = snap.val() || {};
     Object.assign(USUARIOS, data);
+    // Si estamos en configuración, actualizar gestión de accesos
+    if (document.getElementById('page-configuracion')?.classList.contains('active')) {
+      renderAccesos();
+    }
   });
 
   // Proveedores
@@ -3080,7 +3240,8 @@ const PAGE_TITLES = {
   cobranzas: 'Compras y Cobranzas',
   importar: 'Importar Excel',
   estadisticas: 'Estadísticas & Análisis',
-  config: 'Configuración'
+  config: 'Configuración',
+  ayuda: '❓ Ayuda'
 };
 
 function navigate(page) {
@@ -3108,6 +3269,7 @@ function navigate(page) {
   if (page === 'choferes')    renderChoferes();
   if (page === 'estadisticas') setTimeout(renderEstadisticas, 150);
   if (page === 'rutachofer')  { poblarSelectoresChofer(); renderRutaChofer(); }
+  if (page === 'configuracion') { renderAccesos(); }
 
   closeSidebar();
   window.scrollTo(0,0);
@@ -3326,7 +3488,8 @@ function guardarEntrega() {
     estado:    document.getElementById('f-estado').value,
     horaAgregado: horaPY(),
     fechaEntrega: null,
-    fechaCreacion: new Date().toISOString()
+    fechaCreacion: new Date().toISOString(),
+    ts: Date.now()
   };
 
   // Guardar como proveedor si es retiro
@@ -3475,6 +3638,21 @@ function renderEntregas(filtro = '', estadoFiltro = '') {
   if (rol === 'operaciones' || rol === 'compras_cobranzas') {
     lista = lista.filter(e => e.tipo === 'retiro' || e.tipo === 'cobranza');
   }
+
+  // ── Filtro de fecha ──
+  // Pendientes/en camino: SIEMPRE visibles sin importar el período
+  // Completadas/reprogramadas: se filtran por período elegido
+  const rango = getRangoFecha();
+  if (rango) {
+    lista = lista.filter(e => {
+      const esPend = e.estado === 'pending' || e.estado === 'transit';
+      if (esPend) return true;
+      const f = e.fechaCreacion ? new Date(e.fechaCreacion) : (e.ts ? new Date(e.ts) : null);
+      if (!f) return false;
+      return f >= rango.desde && f <= rango.hasta;
+    });
+  }
+
   if (filtro) {
     const f = filtro.toLowerCase();
     lista = lista.filter(e =>
@@ -3486,6 +3664,13 @@ function renderEntregas(filtro = '', estadoFiltro = '') {
   }
   if (estadoFiltro) {
     lista = lista.filter(e => e.estado === estadoFiltro);
+  }
+
+  // Mostrar contador
+  const countEl = document.getElementById('ff-count');
+  if (countEl) {
+    const pend = lista.filter(e => e.estado==='pending'||e.estado==='transit').length;
+    countEl.textContent = `${lista.length} entregas${pend ? ' · ' + pend + ' pendientes' : ''}`;
   }
 
   const vacio = lista.length === 0;
@@ -3593,10 +3778,117 @@ function renderEntregas(filtro = '', estadoFiltro = '') {
   });
 }
 
+// ─── FILTRO FECHA ENTREGAS ─────────────────────────────────
+APP._filtroFecha = 'hoy';
+
+function setFiltroFecha(tipo) {
+  APP._filtroFecha = tipo;
+  ['hoy','ayer','semana','mes','periodo','todos'].forEach(t => {
+    document.getElementById('ff-'+t)?.classList.toggle('active', t === tipo);
+  });
+  const rango = document.getElementById('ff-rango');
+  if (rango) rango.style.display = tipo === 'periodo' ? 'flex' : 'none';
+  filtrarEntregas();
+}
+
+function getRangoFecha() {
+  const tipo = APP._filtroFecha || 'hoy';
+  const hoyStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Asuncion' });
+  const hoy = new Date(hoyStr + 'T00:00:00');
+  if (tipo === 'hoy')    return { desde: hoy, hasta: new Date(hoy.getTime() + 86400000 - 1) };
+  if (tipo === 'ayer')   { const a = new Date(hoy.getTime()-86400000); return { desde: a, hasta: new Date(hoy.getTime()-1) }; }
+  if (tipo === 'semana') { const l = new Date(hoy); l.setDate(hoy.getDate()-((hoy.getDay()+6)%7)); return { desde: l, hasta: new Date(hoy.getTime()+86400000-1) }; }
+  if (tipo === 'mes')    return { desde: new Date(hoy.getFullYear(), hoy.getMonth(), 1), hasta: new Date(hoy.getTime()+86400000-1) };
+  if (tipo === 'periodo') {
+    const dv = document.getElementById('ff-desde')?.value;
+    const hv = document.getElementById('ff-hasta')?.value;
+    return { desde: dv ? new Date(dv+'T00:00:00') : new Date(0), hasta: hv ? new Date(hv+'T23:59:59') : new Date() };
+  }
+  return null; // todos
+}
+
 function filtrarEntregas() {
-  const filtro = document.getElementById('search-entregas').value;
-  const estado = document.getElementById('filter-estado').value;
+  const filtro = document.getElementById('search-entregas')?.value || '';
+  const estado = document.getElementById('filter-estado')?.value || '';
   renderEntregas(filtro, estado);
+}
+
+// ─── GESTIÓN DE ACCESOS ────────────────────────────────────
+function renderAccesos() {
+  const el = document.getElementById('accesos-lista');
+  if (!el) return;
+  const todos = Object.entries(USUARIOS).map(([pin, u]) => ({ pin, ...u }));
+  if (!todos.length) {
+    el.innerHTML = '<p style="color:var(--white-dim);font-size:13px">Sin usuarios registrados</p>';
+    return;
+  }
+
+  const rolesLabel = { admin:'👑 Admin', editor:'✏️ Editor', vendedor:'👤 Vendedor', chofer:'🚚 Chofer', tecnico:'🛠️ Técnico', compras_cobranzas:'💰 Compras/Cobr.', operaciones:'⚙️ Operaciones', invitado:'👁️ Invitado' };
+  const ordenGrupos = ['admin','editor','vendedor','chofer','tecnico','compras_cobranzas','operaciones','invitado'];
+  const grupos = {};
+  todos.forEach(u => {
+    const g = u.rol || 'invitado';
+    if (!grupos[g]) grupos[g] = [];
+    grupos[g].push(u);
+  });
+
+  let html = '';
+  ordenGrupos.forEach(grupo => {
+    const users = grupos[grupo] || [];
+    if (!users.length) return;
+    html += `<div style="font-size:11px;font-weight:700;color:var(--white-faint);text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px">${rolesLabel[grupo]||grupo}</div>`;
+    users.forEach(u => {
+      const bloqueado = u.bloqueado === true;
+      html += `<div class="acceso-row">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px">${u.nombre||'—'}</div>
+          <div style="font-size:11px;color:var(--white-faint);font-family:var(--font-display);letter-spacing:2px;margin-top:2px">PIN: ${u.pin}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-xs" onclick="editarPinAcceso('${u.pin}')" title="Cambiar PIN">✏️ PIN</button>
+          <button class="btn btn-xs" onclick="toggleBloqueoAcceso('${u.pin}')"
+            style="background:${bloqueado?'var(--green-bg)':'var(--red-bg)'};border:1px solid ${bloqueado?'var(--green)':'var(--red)'};color:${bloqueado?'var(--green)':'var(--red)'};border-radius:var(--radius-sm);padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700">
+            ${bloqueado?'✅ Activar':'🔒 Bloquear'}
+          </button>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML = html || '<p style="color:var(--white-dim);font-size:13px">Sin usuarios</p>';
+}
+
+function editarPinAcceso(pinActual) {
+  const u = USUARIOS[pinActual];
+  if (!u) return;
+  const nuevoPIN = prompt(`Cambiar PIN de "${u.nombre}"\nPIN actual: ${pinActual}\n\nIngresá el nuevo PIN (4 dígitos):`);
+  if (!nuevoPIN) return;
+  if (!/^\d{4}$/.test(nuevoPIN)) { toast('El PIN debe tener exactamente 4 dígitos numéricos', 'error'); return; }
+  if (USUARIOS[nuevoPIN] && nuevoPIN !== pinActual) { toast(`El PIN ${nuevoPIN} ya está en uso por ${USUARIOS[nuevoPIN].nombre}`, 'error'); return; }
+  const userData = { ...u };
+  const updates = {};
+  // Si es dinámico, actualizar en Firebase
+  updates['pinesDinamicos/' + pinActual] = null;
+  updates['pinesDinamicos/' + nuevoPIN]  = { ...userData, id: userData.id || ('u_'+Date.now()) };
+  db.ref().update(updates).then(() => {
+    delete USUARIOS[pinActual];
+    USUARIOS[nuevoPIN] = userData;
+    toast(`PIN de "${u.nombre}" cambiado a ${nuevoPIN}`, 'success');
+    renderAccesos();
+  }).catch(() => toast('Error al cambiar PIN', 'error'));
+}
+
+function toggleBloqueoAcceso(pin) {
+  const u = USUARIOS[pin];
+  if (!u) return;
+  const nuevoEstado = !u.bloqueado;
+  const accion = nuevoEstado ? 'bloquear' : 'activar';
+  if (!confirm(`¿${accion.charAt(0).toUpperCase()+accion.slice(1)} el acceso de "${u.nombre}"?`)) return;
+  USUARIOS[pin].bloqueado = nuevoEstado;
+  // Persistir en Firebase
+  db.ref('pinesDinamicos/' + pin).update({ ...u, bloqueado: nuevoEstado })
+    .catch(() => {}); // Si no está en pinesDinamicos no importa — solo bloquea en sesión
+  toast(`${u.nombre} ${nuevoEstado ? '🔒 bloqueado' : '✅ activado'}`, nuevoEstado ? 'error' : 'success');
+  renderAccesos();
 }
 
 // ─── RENDER CLIENTES ───────────────────────────────────────
@@ -4002,13 +4294,74 @@ function updateConfig(key, val) {
 }
 
 function guardarConfigNegocio() {
-  const cfg = {
-    empresa:  document.getElementById('cfg-empresa').value,
-    ciudad:   document.getElementById('cfg-ciudad').value,
-    whatsapp: document.getElementById('cfg-wa').value
-  };
+  const empresa  = document.getElementById('cfg-empresa').value.trim();
+  const ciudad   = document.getElementById('cfg-ciudad').value.trim();
+  const whatsapp = document.getElementById('cfg-wa').value.trim();
+  const cfg = { empresa, ciudad, whatsapp };
   APP.config = { ...APP.config, ...cfg };
   fbGuardarConfig(cfg);
+  // Actualizar topbar con el nombre de empresa
+  if (empresa) aplicarMarcaEmpresa(empresa);
+  toast('✅ Datos guardados', 'success');
+}
+
+function aplicarMarcaEmpresa(nombre) {
+  // Actualizar nombre en sidebar (app)
+  const brandEls = document.querySelectorAll('.empresa-nombre');
+  brandEls.forEach(el => el.textContent = nombre);
+}
+
+function subirLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 500000) { toast('El logo debe pesar menos de 500KB', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const b64 = e.target.result;
+    // Mostrar preview
+    const preview = document.getElementById('logo-preview');
+    if (preview) preview.innerHTML = `<img src="${b64}" style="width:100%;height:100%;object-fit:contain">`;
+    // Guardar en Firebase y localStorage
+    APP.config = { ...APP.config, logo: b64 };
+    db.ref('config/logo').set(b64)
+      .then(() => toast('✅ Logo guardado', 'success'))
+      .catch(() => toast('Error al guardar logo', 'error'));
+    // Aplicar en sidebar y login
+    aplicarLogo(b64);
+  };
+  reader.readAsDataURL(file);
+}
+
+function quitarLogo() {
+  if (!confirm('¿Quitar el logo y volver al ícono original?')) return;
+  db.ref('config/logo').remove().then(() => {
+    APP.config = { ...APP.config, logo: null };
+    // Restaurar ícono original en sidebar
+    const logoEls = document.querySelectorAll('.empresa-logo');
+    logoEls.forEach(el => {
+      el.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M3 8L12 3L21 8V16L12 21L3 16V8Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M12 3V12M12 12L21 8M12 12L3 8" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="12" cy="12" r="2" fill="#fff"/>
+      </svg>`;
+    });
+    // Restaurar preview
+    const preview = document.getElementById('logo-preview');
+    if (preview) preview.innerHTML = '<span style="font-size:24px">🏢</span>';
+    toast('Logo eliminado — se restauró el ícono original', 'success');
+  }).catch(() => toast('Error al quitar logo', 'error'));
+}
+
+function aplicarLogo(b64) {
+  if (!b64) return;
+  // En sidebar app
+  const logoEls = document.querySelectorAll('.empresa-logo');
+  logoEls.forEach(el => {
+    el.innerHTML = `<img src="${b64}" style="width:100%;height:100%;object-fit:contain;border-radius:6px">`;
+  });
+  // Preview en config
+  const preview = document.getElementById('logo-preview');
+  if (preview) preview.innerHTML = `<img src="${b64}" style="width:100%;height:100%;object-fit:contain">`;
 }
 
 function limpiarEntregasHoy() {
@@ -4971,14 +5324,15 @@ function actualizarDisplayPin() {
 
 function pinEnter() {
   const usuario = USUARIOS[_pinActual];
-  if (usuario) {
+  if (usuario && !usuario.bloqueado) {
     APP._rol      = usuario.rol;
     APP._usuario  = usuario;
     sessionStorage.setItem('nl_rol',     usuario.rol);
     sessionStorage.setItem('nl_usuario', JSON.stringify(usuario));
     mostrarApp();
   } else {
-    document.getElementById('pin-error').textContent = 'PIN incorrecto. Intentá de nuevo.';
+    const errMsg = usuario?.bloqueado ? '🔒 Acceso bloqueado. Contactá al administrador.' : 'PIN incorrecto. Intentá de nuevo.';
+    document.getElementById('pin-error').textContent = errMsg;
     // Shake animation
     const screen = document.querySelector('#login-screen > div');
     screen.style.transform = 'translateX(-8px)';
@@ -5009,7 +5363,15 @@ function mostrarApp() {
   poblarSelectVendedorForm();
   poblarSelectChoferEnEntrega();
   poblarSelectorRutaDia();
-  // Auto-seleccionar vendedor si es perfil vendedor
+  // Cargar logo y nombre de empresa si existen
+  db.ref('config/logo').once('value', snap => {
+    if (snap.val()) aplicarLogo(snap.val());
+  });
+  db.ref('config/empresa').once('value', snap => {
+    if (snap.val()) aplicarMarcaEmpresa(snap.val());
+  });
+  // Renderizar accesos inmediatamente (USUARIOS ya está cargado hardcodeado)
+  renderAccesos();
   setTimeout(() => {
     if ((APP._rol === 'vendedor' || APP._rol === 'editor') && APP._usuario?.nombre) {
       const selV = document.getElementById('f-vendedor');
@@ -5276,21 +5638,31 @@ function renderEstadisticas() {
 
 function filtrarEntregasPorPeriodo(periodo) {
   const ahora = new Date();
-  const hoy = ahora.toDateString();
+  const hoyStr = ahora.toLocaleDateString('en-CA', { timeZone: 'America/Asuncion' });
+  const hoy = new Date(hoyStr + 'T00:00:00');
 
   return APP.entregas.filter(e => {
-    if (!e.fechaCreacion) return periodo === 'hoy' ? false : true;
-    const fecha = new Date(e.fechaCreacion);
-    if (periodo === 'hoy')    return fecha.toDateString() === hoy;
+    // Intentar obtener fecha: primero fechaCreacion, luego ts, luego incluir siempre
+    let fecha = null;
+    if (e.fechaCreacion) fecha = new Date(e.fechaCreacion);
+    else if (e.ts)       fecha = new Date(e.ts);
+
+    // Si no tiene fecha, incluir en todos los períodos excepto 'hoy'
+    if (!fecha) return periodo !== 'hoy';
+
+    if (periodo === 'hoy') {
+      const fStr = fecha.toLocaleDateString('en-CA', { timeZone: 'America/Asuncion' });
+      return fStr === hoyStr;
+    }
     if (periodo === 'semana') {
-      const semAgo = new Date(ahora); semAgo.setDate(ahora.getDate() - 7);
+      const semAgo = new Date(hoy); semAgo.setDate(hoy.getDate() - 7);
       return fecha >= semAgo;
     }
     if (periodo === 'mes') {
-      const mesAgo = new Date(ahora); mesAgo.setDate(ahora.getDate() - 30);
+      const mesAgo = new Date(hoy); mesAgo.setDate(hoy.getDate() - 30);
       return fecha >= mesAgo;
     }
-    return true; // todo
+    return true; // 'todo' — todo lo que está cargado en memoria
   });
 }
 
@@ -5346,13 +5718,12 @@ function renderAnalisisRecompra(entregas) {
   const el = document.getElementById('recompra-tabla');
   if (!el) return;
 
-  // Agrupar por cliente + zona
   const clientes = {};
   entregas.forEach(e => {
     if (!e.cliente) return;
     const k = e.codigo || e.cliente;
     if (!clientes[k]) {
-      clientes[k] = { nombre: e.cliente, zona: e.zona || '—', vendedor: e.vendedor || '—', count: 0, ultima: null };
+      clientes[k] = { nombre: e.cliente, zona: e.zona||'—', vendedor: e.vendedor||'—', count: 0, ultima: null };
     }
     clientes[k].count++;
     if (e.fechaCreacion) {
@@ -5361,46 +5732,73 @@ function renderAnalisisRecompra(entregas) {
     }
   });
 
-  const lista = Object.values(clientes).sort((a,b) => b.count - a.count).slice(0, 20);
+  const listaCompleta = Object.values(clientes).sort((a,b) => b.count - a.count);
+  if (!listaCompleta.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><p>Sin datos suficientes</p></div>';
+    return;
+  }
 
-  if (!lista.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><p>Sin datos suficientes para analizar</p></div>'; return; }
+  const pp  = APP._recompraPP  || 10;
+  const pag = APP._recompraPag || 1;
+  const totalPags = pp === 9999 ? 1 : Math.ceil(listaCompleta.length / pp);
+  const inicio = pp === 9999 ? 0 : (pag - 1) * pp;
+  const lista  = pp === 9999 ? listaCompleta : listaCompleta.slice(inicio, inicio + pp);
+
+  const filas = lista.map(c => {
+    const frec = c.count >= 4 ? 'Alta 🔥' : c.count >= 2 ? 'Media 📈' : 'Baja 📉';
+    const frecColor = c.count >= 4 ? 'var(--green)' : c.count >= 2 ? 'var(--yellow)' : 'var(--white-dim)';
+    let proxima = '—';
+    if (c.ultima && c.count >= 2) {
+      const prox = new Date(c.ultima);
+      prox.setDate(prox.getDate() + Math.round(30 / c.count));
+      proxima = prox.toLocaleDateString('es-PY', { day:'2-digit', month:'2-digit', timeZone:'America/Asuncion' });
+    }
+    return `<tr>
+      <td><strong>${c.nombre}</strong></td>
+      <td>${c.zona}</td><td>${c.vendedor}</td>
+      <td><strong style="font-family:var(--font-display)">${c.count}</strong></td>
+      <td><span style="color:${frecColor};font-weight:600">${frec}</span></td>
+      <td style="color:var(--blue-light)">${proxima}</td>
+    </tr>`;
+  }).join('');
+
+  const navPag = pp !== 9999 ? `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:8px">
+      <span style="font-size:12px;color:var(--white-dim)">${inicio+1}–${Math.min(inicio+pp, listaCompleta.length)} de ${listaCompleta.length}</span>
+      <div style="display:flex;gap:6px">
+        <button onclick="cambiarPagRC(-1)" ${pag<=1?'disabled':''} class="btn btn-ghost btn-xs">← Ant.</button>
+        <span style="font-size:12px;color:var(--white-dim)">${pag}/${totalPags}</span>
+        <button onclick="cambiarPagRC(1)" ${pag>=totalPags?'disabled':''} class="btn btn-ghost btn-xs">Sig. →</button>
+      </div>
+    </div>` : `<div style="font-size:12px;color:var(--white-dim);margin-top:8px">Todos los ${listaCompleta.length} clientes</div>`;
 
   el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;font-weight:600">📊 ${listaCompleta.length} clientes con entregas</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="setPPRC(10)"   class="btn btn-xs ${pp===10?'btn-primary':'btn-ghost'}">10</button>
+        <button onclick="setPPRC(25)"   class="btn btn-xs ${pp===25?'btn-primary':'btn-ghost'}">25</button>
+        <button onclick="setPPRC(9999)" class="btn btn-xs ${pp===9999?'btn-primary':'btn-ghost'}">Todos</button>
+      </div>
+    </div>
     <div class="table-wrap">
       <table>
-        <thead><tr>
-          <th>Cliente</th><th>Zona</th><th>Vendedor</th>
-          <th>Pedidos</th><th>Frecuencia</th><th>Próxima est.</th>
-        </tr></thead>
-        <tbody>
-          ${lista.map(c => {
-            const frec = c.count >= 4 ? 'Alta 🔥' : c.count >= 2 ? 'Media 📈' : 'Baja 📉';
-            const frecColor = c.count >= 4 ? 'var(--green)' : c.count >= 2 ? 'var(--yellow)' : 'var(--white-dim)';
-            // Estimación próxima compra basada en frecuencia
-            let proxima = '—';
-            if (c.ultima && c.count >= 2) {
-              const diasPromedio = Math.round(30 / c.count);
-              const prox = new Date(c.ultima);
-              prox.setDate(prox.getDate() + diasPromedio);
-              proxima = prox.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit' });
-            }
-            return `<tr>
-              <td><strong>${c.nombre}</strong>${c.coords ? ' <span style="color:var(--green);font-size:11px" title="Coordenadas exactas">📍</span>' : ''}</td>
-              <td>${c.zona}</td>
-              <td>${c.vendedor}</td>
-              <td><strong style="font-family:var(--font-display)">${c.count}</strong></td>
-              <td><span style="color:${frecColor};font-weight:600">${frec}</span></td>
-              <td style="color:var(--blue-light)">${proxima}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
+        <thead><tr><th>Cliente</th><th>Zona</th><th>Vendedor</th><th>Pedidos</th><th>Frecuencia</th><th>Próxima est.</th></tr></thead>
+        <tbody>${filas}</tbody>
       </table>
     </div>
+    ${navPag}
     <div style="font-size:11px;color:var(--white-faint);margin-top:10px;padding:8px">
-      💡 La estimación de próxima compra se calcula dividiendo 30 días entre la frecuencia de pedidos del cliente.
-      Este análisis es la base para integración futura con CRM.
-    </div>
-  `;
+      💡 Estimación calculada dividiendo 30 días entre la frecuencia de pedidos del cliente.
+    </div>`;
+}
+
+function setPPRC(n)  { APP._recompraPP = n; APP._recompraPag = 1; renderEstadisticas(); }
+function cambiarPagRC(d) {
+  const total = Object.values(APP.entregas.reduce((a,e) => { if(e.cliente) a[e.codigo||e.cliente]=1; return a; }, {})).length;
+  const pp = APP._recompraPP || 10;
+  APP._recompraPag = Math.max(1, Math.min(Math.ceil(total/pp), (APP._recompraPag||1) + d));
+  renderEstadisticas();
 }
 
 // ─── CHART POR TÉCNICO ────────────────────────────────────
