@@ -5427,19 +5427,64 @@ function pinEnter() {
 }
 
 function mostrarApp() {
+  // ── Reparar datos en Firebase ──────────────────────────────
+  // 1. Borrar entradas con clave "undefined" en vendedores
+  // 2. Asegurar que Renato Martinez (v_007) exista en vendedores
+  // 3. Asegurar que Liz Insfran exista una sola vez
+  db.ref('vendedores').once('value', snap => {
+    const data = snap.val() || {};
+    const updates = {};
+
+    // Borrar claves "undefined"
+    if (data['undefined'] !== undefined) {
+      updates['vendedores/undefined'] = null;
+    }
+
+    // Asegurar Renato Martinez v_007
+    const tieneRenato = Object.values(data).some(v => v && v.id === 'v_007');
+    if (!tieneRenato) {
+      updates['vendedores/v_007'] = {
+        id: 'v_007', nombre: 'Renato Martinez',
+        wa: '+595985892008', zona: '', email: '', notif: true
+      };
+    } else {
+      // Si existe pero con nombre viejo, actualizarlo
+      const entry = Object.entries(data).find(([k,v]) => v && v.id === 'v_007');
+      if (entry && entry[1].nombre !== 'Renato Martinez') {
+        updates['vendedores/' + entry[0] + '/nombre'] = 'Renato Martinez';
+      }
+    }
+
+    // Asegurar Liz Insfran una sola vez (v_013)
+    const lizEntries = Object.entries(data).filter(([k,v]) => v && v.nombre === 'Liz Insfran');
+    if (lizEntries.length === 0) {
+      // No existe, crearla
+      updates['vendedores/v_013'] = {
+        id: 'v_013', nombre: 'Liz Insfran',
+        wa: '', zona: '', email: '', notif: true
+      };
+    } else if (lizEntries.length > 1) {
+      // Duplicada, borrar todas menos la primera
+      lizEntries.slice(1).forEach(([k]) => {
+        updates['vendedores/' + k] = null;
+      });
+    }
+
+    if (Object.keys(updates).length > 0) {
+      db.ref().update(updates);
+    }
+  });
+
   // Limpiar pinesDinamicos de usuarios que ya están hardcodeados (evita duplicados)
   db.ref('pinesDinamicos').once('value', snap => {
     const data = snap.val() || {};
     const updates = {};
     Object.keys(data).forEach(pin => {
-      // Si el PIN ya existe hardcodeado Y tiene el mismo nombre, borrarlo de Firebase
-      if (USUARIOS[pin] && USUARIOS[pin].nombre === data[pin].nombre) {
+      if (USUARIOS[pin] && USUARIOS[pin].nombre === data[pin]?.nombre) {
         updates['pinesDinamicos/' + pin] = null;
       }
     });
-    if (Object.keys(updates).length > 0) {
-      db.ref().update(updates);
-    }
+    if (Object.keys(updates).length > 0) db.ref().update(updates);
   });
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
