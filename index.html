@@ -2949,7 +2949,7 @@ function seedVendedoresIniciales() {
     { id: 'v_004', nombre: 'Jose Negreira',     wa: '+595986659333', zona: '', email: '', notif: true },
     { id: 'v_005', nombre: 'Cirian Rodriguez',  wa: '+595985639200', zona: '', email: '', notif: true },
     { id: 'v_006', nombre: 'Vivian Santander',  wa: '+595971629103', zona: '', email: '', notif: true },
-    { id: 'v_007', nombre: 'Alicia Florentin',  wa: '+595985892008', zona: '', email: '', notif: true },
+    { id: 'v_007', nombre: 'Renato Martinez',  wa: '+595985892008', zona: '', email: '', notif: true },
     { id: 'v_008', nombre: 'Noemi Vera',        wa: '+595986663888', zona: '', email: '', notif: true },
     { id: 'v_009', nombre: 'Lorena Benitez',    wa: '+595986658900', zona: '', email: '', notif: true },
     { id: 'v_010', nombre: 'Iomara Salinas',    wa: '+595971727983', zona: '', email: '', notif: true },
@@ -3073,9 +3073,14 @@ function iniciarListenersFirebase() {
   // Se mergean con el objeto USUARIOS hardcodeado en tiempo de ejecución
   db.ref('pinesDinamicos').on('value', snap => {
     const data = snap.val() || {};
-    Object.assign(USUARIOS, data);
+    // Solo agregar los que NO están ya hardcodeados (evita duplicados)
+    Object.entries(data).forEach(([pin, u]) => {
+      if (!USUARIOS[pin]) {
+        USUARIOS[pin] = u;
+      }
+    });
     // Si estamos en configuración, actualizar gestión de accesos
-    if (document.getElementById('page-configuracion')?.classList.contains('active')) {
+    if (document.getElementById('page-config')?.classList.contains('active')) {
       renderAccesos();
     }
   });
@@ -4620,12 +4625,31 @@ function guardarNuevoAcceso() {
   if (!rol)    { toast('Seleccioná un rol', 'error'); return; }
   if (!pin || pin.length !== 4) { toast('El PIN debe tener 4 dígitos', 'error'); return; }
   if (USUARIOS[pin]) { toast(`El PIN ${pin} ya está en uso por ${USUARIOS[pin].nombre}`, 'error'); return; }
-  const nuevo = { rol, nombre, tipo: rol, id: 'u_' + Date.now() };
+
+  const uid = 'u_' + Date.now();
+  const nuevo = { rol, nombre, tipo: rol, id: uid };
   USUARIOS[pin] = nuevo;
-  // Guardar en Firebase pinesDinamicos
-  db.ref('pinesDinamicos/' + pin).set(nuevo)
-    .then(() => toast(`✅ ${nombre} agregado con PIN ${pin}`, 'success'))
-    .catch(() => toast('Error al guardar en Firebase', 'error'));
+
+  // Guardar PIN en Firebase
+  db.ref('pinesDinamicos/' + pin).set(nuevo);
+
+  // Sincronizar con la lista del rol correspondiente
+  if (rol === 'vendedor') {
+    const vendedorData = { id: uid, nombre, wa: '', zona: '', email: '', notif: true };
+    APP.vendedores.push(vendedorData);
+    fbGuardarVendedor(vendedorData);
+    poblarSelectVendedorForm();
+  } else if (rol === 'chofer') {
+    const choferData = { id: uid, nombre, wa: '', zona: '', licencia: '' };
+    APP.choferes.push(choferData);
+    db.ref('choferes/' + uid).set(choferData);
+  } else if (rol === 'tecnico') {
+    const tecData = { id: uid, nombre, wa: '', zona: '' };
+    APP.tecnicos.push(tecData);
+    db.ref('tecnicos/' + uid).set(tecData);
+  }
+
+  toast(`✅ ${nombre} agregado con PIN ${pin}`, 'success');
   cerrarModal('modal-nuevo-acceso');
   renderAccesos();
 }
@@ -4703,13 +4727,18 @@ function guardarVendedor() {
     APP.vendedores.push(datos);
   }
 
-  // Guardar/actualizar el PIN en Firebase (pinesDinamicos)
+  // Guardar/actualizar el PIN en Firebase (pinesDinamicos) y en USUARIOS
   if (pin) {
     // Quitar PIN viejo de este vendedor si cambió
     const pinViejo = Object.keys(USUARIOS).find(p => USUARIOS[p].id === vendedorId && p !== pin);
     const updates = {};
-    if (pinViejo) updates['pinesDinamicos/' + pinViejo] = null;
-    updates['pinesDinamicos/' + pin] = { rol: 'vendedor', nombre, tipo: 'vendedor', id: vendedorId };
+    if (pinViejo) {
+      updates['pinesDinamicos/' + pinViejo] = null;
+      delete USUARIOS[pinViejo];
+    }
+    const usuarioData = { rol: 'vendedor', nombre, tipo: 'vendedor', id: vendedorId };
+    updates['pinesDinamicos/' + pin] = usuarioData;
+    USUARIOS[pin] = usuarioData; // Agregar también a USUARIOS local
     db.ref().update(updates).catch(() => toast('Error al guardar PIN', 'error'));
     toast(`✅ "${nombre}" guardado con PIN ${pin}`, 'success');
   } else {
@@ -5398,6 +5427,20 @@ function pinEnter() {
 }
 
 function mostrarApp() {
+  // Limpiar pinesDinamicos de usuarios que ya están hardcodeados (evita duplicados)
+  db.ref('pinesDinamicos').once('value', snap => {
+    const data = snap.val() || {};
+    const updates = {};
+    Object.keys(data).forEach(pin => {
+      // Si el PIN ya existe hardcodeado Y tiene el mismo nombre, borrarlo de Firebase
+      if (USUARIOS[pin] && USUARIOS[pin].nombre === data[pin].nombre) {
+        updates['pinesDinamicos/' + pin] = null;
+      }
+    });
+    if (Object.keys(updates).length > 0) {
+      db.ref().update(updates);
+    }
+  });
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
 
